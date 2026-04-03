@@ -151,6 +151,12 @@ def classify_regime_hmm(
     with open(model_path, "rb") as f:
         model = pickle.load(f)
 
+    # Normalize features using the model's stored params (from training)
+    norm_means = getattr(model, "_norm_means", None)
+    norm_stds = getattr(model, "_norm_stds", None)
+    if norm_means is not None and norm_stds is not None:
+        features = (features - norm_means) / norm_stds
+
     # Predict most likely state for the latest observation
     state_probs = model.predict_proba(features)
     latest_probs = state_probs[-1]
@@ -231,10 +237,17 @@ async def main() -> None:
 
         if HMM_MODEL_PATH.exists():
             try:
-                features = df[["log_return", "atr_14", "adx_14"]].dropna().values
+                # Must match training features: log_return, atr_14, adx_14, volatility_20
+                df["volatility_20"] = df["log_return"].rolling(20).std()
+                feature_df = df[["log_return", "atr_14", "adx_14", "volatility_20"]].dropna()
+                features = feature_df.values
                 if len(features) >= 10:
                     hmm_state, hmm_confidence = classify_regime_hmm(features, HMM_MODEL_PATH)
-                    regime = REGIME_LABELS.get(hmm_state, "ranging")
+                    # Use model's own label mapping if available
+                    with open(HMM_MODEL_PATH, "rb") as _f:
+                        _model = pickle.load(_f)
+                    model_labels = getattr(_model, "_state_labels", REGIME_LABELS)
+                    regime = model_labels.get(hmm_state, REGIME_LABELS.get(hmm_state, "ranging"))
                     confidence = hmm_confidence
                     logger.info(f"HMM regime: {regime} (state={hmm_state}, conf={confidence:.3f})")
                 else:

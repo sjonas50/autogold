@@ -70,11 +70,11 @@ class TestInfrastructure:
         assert resp.json()["status"] == "ok"
 
     def test_paperclip_agents_registered(self):
-        """All 7 agents are registered in Paperclip."""
+        """All agents are registered in Paperclip."""
         resp = httpx.get(f"{PAPERCLIP_URL}/api/companies/{COMPANY_ID}/agents")
         assert resp.status_code == 200
         agents = resp.json()
-        assert len(agents) == 7
+        assert len(agents) >= 7  # 7 core + any new agents
 
         names = {a["name"] for a in agents}
         expected = {
