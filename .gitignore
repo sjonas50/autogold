@@ -1,0 +1,33 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.ruff_cache/
+.pytest_cache/
+.env
+*.egg
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data
+*.csv
+*.parquet
+data/
+
+# Docker
+docker-data/
+
+# Paperclip
+node_modules/
+
+# Generated Pine Script (track individually, not bulk)
+pine/generated/*.pine
+!pine/generated/.gitkeep
