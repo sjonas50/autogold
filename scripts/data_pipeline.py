@@ -184,7 +184,10 @@ async def create_cio_alert(issue_text: str) -> None:
 
 async def main() -> None:
     """Main heartbeat execution."""
-    logger.info("Data Pipeline heartbeat starting")
+    logger.info("Data Pipeline (Ops Lead) heartbeat starting")
+
+    # Team lead duties: check for CIO tasks, delegate to Calendar/Skill Optimizer
+    await handle_ops_lead_duties()
 
     conn = await asyncpg.connect(get_database_url())
     try:
@@ -238,3 +241,31 @@ if __name__ == "__main__":
 
     load_dotenv()
     asyncio.run(main())
+
+
+# --- Operations Lead delegation ---
+async def handle_ops_lead_duties():
+    """Check for CIO tasks and delegate to Calendar/Skill Optimizer if needed."""
+    from gold_trading.paperclip import create_task, get_my_tasks
+
+    tasks = await get_my_tasks("data_pipeline")
+    for task in tasks:
+        title = task.get("title", "").lower()
+        desc = task.get("description", "")
+
+        if any(kw in title for kw in ["event", "fomc", "cpi", "nfp", "calendar", "news"]):
+            await create_task(
+                title=f"[From Ops Lead] {task.get('title', '')}",
+                description=desc,
+                assignee="economic_calendar",
+                parent_id=task.get("id"),
+            )
+        elif any(kw in title for kw in ["skill", "improve", "optimize", "performance review"]):
+            await create_task(
+                title=f"[From Ops Lead] {task.get('title', '')}",
+                description=desc,
+                assignee="skill_optimizer",
+                parent_id=task.get("id"),
+            )
+        else:
+            logger.info(f"Data Pipeline handling task directly: {task.get('title', '')}")

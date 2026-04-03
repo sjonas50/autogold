@@ -32,6 +32,8 @@ OOS_DEGRADATION_THRESHOLD = 0.50  # Reject if OOS Sharpe < 50% of IS Sharpe
 
 PAPERCLIP_URL = os.environ.get("PAPERCLIP_URL", "http://localhost:3100")
 COMPANY_ID = os.environ.get("PAPERCLIP_COMPANY_ID", "3422f81a-8ca2-4ce1-aae5-5cf8ce34fa0e")
+# Reports to Technical Analyst (Strategy Team Lead), escalates to CIO
+STRATEGY_LEAD_ID = "e475c802-6bde-4d8e-bb43-602842ae5e7f"
 CIO_AGENT_ID = "37bbe408-e573-4598-a374-cc369bad0258"
 
 
@@ -186,7 +188,7 @@ async def create_cio_report(strategy_id: str, wf_result: dict) -> None:
                         f"- Threshold: {OOS_DEGRADATION_THRESHOLD:.0%}\n\n"
                         f"{'Strategy is robust — recommend proceeding to deployment.' if wf_result['passed'] else 'Strategy is overfit — recommend retiring.'}"
                     ),
-                    "assigneeAgentId": CIO_AGENT_ID,
+                    "assigneeAgentId": STRATEGY_LEAD_ID,
                     "priority": "high" if not wf_result["passed"] else "normal",
                 },
             )

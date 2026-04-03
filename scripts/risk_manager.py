@@ -1,4 +1,6 @@
-"""Risk Manager agent — deterministic drawdown enforcement. NO LLM CALLS.
+"""Risk Manager agent — INDEPENDENT safety officer. NO LLM CALLS.
+
+Reports to NO ONE. Can veto the CIO. Cannot be overridden.
 
 Paperclip process adapter script. Runs on heartbeat (every 15 minutes).
 This is the safety layer — it enforces all hard risk rules:

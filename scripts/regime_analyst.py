@@ -168,10 +168,13 @@ def classify_regime_hmm(
 
 async def main() -> None:
     """Main heartbeat execution."""
-    logger.info("Regime Analyst heartbeat starting")
+    logger.info("Regime Analyst (Intelligence Lead) heartbeat starting")
 
     conn = await asyncpg.connect(get_database_url())
     try:
+        # Team lead duties: check for CIO tasks, delegate to Macro/Sentiment
+        await handle_team_lead_duties(conn)
+
         # Load multi-timeframe OHLCV data
         from gold_trading.db.queries.ohlcv import get_multi_timeframe
 
@@ -386,3 +389,32 @@ if __name__ == "__main__":
 
     load_dotenv()
     asyncio.run(main())
+
+
+# --- Intelligence Lead delegation ---
+async def handle_team_lead_duties(conn):
+    """Check for CIO tasks and delegate to Macro/Sentiment if needed."""
+    from gold_trading.paperclip import create_task, get_my_tasks
+
+    tasks = await get_my_tasks("regime_analyst")
+    for task in tasks:
+        title = task.get("title", "").lower()
+        desc = task.get("description", "")
+
+        # Route to appropriate sub-agent
+        if any(kw in title for kw in ["macro", "fred", "yield", "dxy", "cpi"]):
+            await create_task(
+                title=f"[From Intelligence Lead] {task.get('title', '')}",
+                description=desc,
+                assignee="macro_analyst",
+                parent_id=task.get("id"),
+            )
+        elif any(kw in title for kw in ["sentiment", "news", "headline", "fomc"]):
+            await create_task(
+                title=f"[From Intelligence Lead] {task.get('title', '')}",
+                description=desc,
+                assignee="sentiment_analyst",
+                parent_id=task.get("id"),
+            )
+        else:
+            logger.info(f"Regime Analyst handling task directly: {task.get('title', '')}")

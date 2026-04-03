@@ -260,11 +260,23 @@ PINESCRIPT:
     return metadata
 
 
-async def check_cio_tasks(conn: asyncpg.Connection) -> str | None:
-    """Check for CIO-directed research tasks in Paperclip.
+async def check_manager_tasks(conn: asyncpg.Connection) -> str | None:
+    """Check for tasks from Strategy Team Lead (Technical Analyst) or CIO.
 
     Returns the task description if found, else None.
     """
+    from gold_trading.paperclip import get_my_tasks
+
+    tasks = await get_my_tasks("quant_researcher")
+    if tasks:
+        task = tasks[0]
+        logger.info(f"Found task from manager: {task.get('title', '')}")
+        return task.get("description") or task.get("title", "")
+    return None
+
+
+async def _legacy_check_cio_tasks(conn: asyncpg.Connection) -> str | None:
+    """Legacy: direct CIO task check (kept as fallback)."""
     quant_id = "881e708a-b4c2-472d-9c74-af7b515cac23"
     paperclip_url = os.environ.get("PAPERCLIP_URL", "http://localhost:3100")
     company_id = os.environ.get("PAPERCLIP_COMPANY_ID", "3422f81a-8ca2-4ce1-aae5-5cf8ce34fa0e")
@@ -348,10 +360,10 @@ async def main() -> None:
             )
             return
 
-        # Check for CIO-directed tasks via Paperclip
-        cio_directive = await check_cio_tasks(conn)
+        # Check for tasks from Strategy Team Lead (Technical Analyst) or CIO
+        cio_directive = await check_manager_tasks(conn)
         if cio_directive:
-            logger.info(f"CIO directive: {cio_directive}")
+            logger.info(f"Manager directive: {cio_directive}")
 
         # Gather context
         context = await gather_context(conn)
