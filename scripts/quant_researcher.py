@@ -182,14 +182,17 @@ Write a Pine Script v6 strategy for GC gold futures on the 5-minute timeframe th
 6. Is optimized for the current regime ({regime})
 
 ## Output Format
-Respond with JSON:
-{{
-  "id": "gs_v<version>_<type>",
-  "name": "Human readable strategy name",
-  "strategy_class": "breakout|mean_reversion|momentum|sweep",
-  "pine_script": "// Full Pine Script v6 code here",
-  "description": "2-3 sentence description of the strategy logic"
-}}"""
+Respond with EXACTLY this structure — metadata as JSON, then Pine Script in a separate fenced block:
+
+METADATA:
+```json
+{{"id": "gs_v1_breakout", "name": "Strategy Name", "strategy_class": "breakout", "description": "2-3 sentences."}}
+```
+
+PINESCRIPT:
+```pinescript
+// Full Pine Script v6 code here
+```"""
 
     response = await client.messages.create(
         model=ANTHROPIC_MODEL,
@@ -198,17 +201,45 @@ Respond with JSON:
     )
 
     text = response.content[0].text.strip()
-    if text.startswith("```"):
-        text = text.split("```")[1]
-        if text.startswith("json"):
-            text = text[4:]
-        text = text.strip()
 
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        logger.error(f"Failed to parse Pine Script generation response: {text[:200]}")
+    # Parse metadata JSON block
+    metadata = None
+    pine_script = None
+
+    # Extract JSON block
+    import re
+
+    json_match = re.search(r"```json\s*\n(.*?)\n```", text, re.DOTALL)
+    if json_match:
+        try:
+            metadata = json.loads(json_match.group(1).strip())
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse metadata JSON: {json_match.group(1)[:200]}")
+
+    # Extract Pine Script block
+    pine_match = re.search(r"```pinescript\s*\n(.*?)\n```", text, re.DOTALL)
+    if not pine_match:
+        # Fallback: try any fenced block that looks like Pine Script
+        pine_match = re.search(r"```(?:pine)?\s*\n(.*?//@version.*?)\n```", text, re.DOTALL)
+    if pine_match:
+        pine_script = pine_match.group(1).strip()
+
+    if not metadata or not pine_script:
+        # Last resort: try parsing entire response as JSON (in case Claude ignored the format)
+        try:
+            parsed = json.loads(text)
+            return parsed
+        except json.JSONDecodeError:
+            pass
+        logger.error(
+            f"Failed to parse generation response. "
+            f"Has metadata: {metadata is not None}, has pine: {pine_script is not None}. "
+            f"Response start: {text[:200]}"
+        )
         return None
+
+    metadata["pine_script"] = pine_script
+    return metadata
 
 
 async def main() -> None:
