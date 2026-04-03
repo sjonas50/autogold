@@ -13,6 +13,7 @@ import os
 
 import anthropic
 import asyncpg
+import httpx
 import pandas as pd
 from loguru import logger
 
@@ -183,6 +184,9 @@ async def generate_pine_script(context: dict, corpus_chunks: list[dict]) -> dict
 ## Past Strategy Results (learn from failures — try a DIFFERENT approach)
 {chr(10).join(context.get("past_results", [])) or "No past strategies yet."}
 
+## CIO Directive (if any — follow this guidance)
+{context.get("cio_directive") or "No specific directive. Use your best judgment based on current regime and past results."}
+
 ## Pine Script v6 Reference
 {rag_context}
 
@@ -256,6 +260,66 @@ PINESCRIPT:
     return metadata
 
 
+async def check_cio_tasks(conn: asyncpg.Connection) -> str | None:
+    """Check for CIO-directed research tasks in Paperclip.
+
+    Returns the task description if found, else None.
+    """
+    quant_id = "881e708a-b4c2-472d-9c74-af7b515cac23"
+    paperclip_url = os.environ.get("PAPERCLIP_URL", "http://localhost:3100")
+    company_id = os.environ.get("PAPERCLIP_COMPANY_ID", "3422f81a-8ca2-4ce1-aae5-5cf8ce34fa0e")
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{paperclip_url}/api/companies/{company_id}/issues",
+                params={
+                    "assigneeAgentId": quant_id,
+                    "status": "todo",
+                },
+            )
+            if resp.status_code == 200:
+                issues = resp.json()
+                if issues:
+                    # Take the highest priority task
+                    task = issues[0]
+                    logger.info(f"Found CIO task: {task.get('title', '')}")
+                    return task.get("description") or task.get("title", "")
+    except Exception as e:
+        logger.debug(f"Could not check Paperclip tasks: {e}")
+
+    return None
+
+
+async def find_best_strategy_to_mutate(conn: asyncpg.Connection) -> dict | None:
+    """Find the best-performing retired strategy to use as a mutation base.
+
+    Returns dict with strategy details and params, or None if no candidates.
+    """
+    row = await conn.fetchrow(
+        """
+        SELECT id, strategy_class, vbt_sharpe, vbt_win_rate, backtest_params
+        FROM strategies
+        WHERE status = 'retired'
+          AND vbt_sharpe IS NOT NULL
+          AND backtest_params IS NOT NULL
+        ORDER BY vbt_sharpe DESC
+        LIMIT 1
+        """
+    )
+    if row and row["backtest_params"]:
+        import json as _json
+
+        return {
+            "id": row["id"],
+            "strategy_class": row["strategy_class"],
+            "sharpe": float(row["vbt_sharpe"]),
+            "win_rate": float(row["vbt_win_rate"]) if row["vbt_win_rate"] else None,
+            "params": _json.loads(row["backtest_params"]),
+        }
+    return None
+
+
 async def main() -> None:
     """Main heartbeat execution."""
     logger.info("Quant Researcher heartbeat starting")
@@ -284,8 +348,14 @@ async def main() -> None:
             )
             return
 
+        # Check for CIO-directed tasks via Paperclip
+        cio_directive = await check_cio_tasks(conn)
+        if cio_directive:
+            logger.info(f"CIO directive: {cio_directive}")
+
         # Gather context
         context = await gather_context(conn)
+        context["cio_directive"] = cio_directive
         logger.info(f"Context: regime={context['regime']}, macro={context['macro_regime']}")
 
         # Search Pine Script corpus for relevant code
@@ -314,13 +384,44 @@ async def main() -> None:
 
         logger.info(f"Generated strategy: {strategy_id} ({strategy_class}), attempt #{attempt}")
 
-        # Vary signal parameters based on attempt number to explore the parameter space
-        # Each attempt uses different lookback/threshold combos
+        # Strategy mutation: if a good base exists, mutate its params instead of random
         import random
 
+        mutation_base = await find_best_strategy_to_mutate(conn)
         rng = random.Random(attempt + hash(strategy_id))
 
-        if strategy_class in ("breakout", "momentum"):
+        if mutation_base and mutation_base["sharpe"] > -2.0:
+            # MUTATE: vary the best strategy's params by ±20-40%
+            base_params = mutation_base["params"]
+            logger.info(
+                f"Mutating from {mutation_base['id']} (Sharpe={mutation_base['sharpe']:.2f}): {base_params}"
+            )
+
+            if base_params.get("type") == "breakout":
+                strategy_class = "breakout"
+                lookback = max(3, int(base_params.get("lookback", 12) * rng.uniform(0.6, 1.4)))
+                atr_mult = max(0.5, base_params.get("atr_multiplier", 1.5) * rng.uniform(0.7, 1.3))
+                signals = generate_breakout_signals(
+                    ohlcv, lookback=lookback, atr_multiplier=atr_mult
+                )
+                logger.info(
+                    f"Mutated breakout params: lookback={lookback}, atr_mult={atr_mult:.2f}"
+                )
+            else:
+                strategy_class = "mean_reversion"
+                vwap_period = max(
+                    12, int(base_params.get("vwap_period", 48) * rng.uniform(0.7, 1.3))
+                )
+                entry_thresh = max(
+                    0.5, base_params.get("entry_threshold", 2.0) * rng.uniform(0.7, 1.3)
+                )
+                signals = generate_mean_reversion_signals(
+                    ohlcv, vwap_period=vwap_period, entry_threshold=entry_thresh
+                )
+                logger.info(
+                    f"Mutated mean-rev params: vwap={vwap_period}, entry={entry_thresh:.2f}"
+                )
+        elif strategy_class in ("breakout", "momentum"):
             lookback = rng.choice([6, 9, 12, 18, 24])
             atr_mult = rng.choice([1.0, 1.5, 2.0, 2.5, 3.0])
             signals = generate_breakout_signals(ohlcv, lookback=lookback, atr_multiplier=atr_mult)
