@@ -115,12 +115,13 @@ def run_backtest(
     gross_loss = abs(float(trades[trades["PnL"] < 0]["PnL"].sum())) if total_trades > 0 else 0.0
     profit_factor = gross_profit / gross_loss if gross_loss > 0 else float("inf")
 
-    # Validation gate
+    # TradingView deployment gate — must pass ALL criteria
     passed = (
-        sharpe >= 1.0
-        and win_rate >= 0.45
+        sharpe >= 1.5
+        and win_rate >= 0.50
         and total_trades >= 50
-        and max_dd < 0.15  # vectorbt DD underestimates vs TradingView
+        and max_dd < 0.05
+        and profit_factor >= 1.3
     )
 
     result = BacktestResult(

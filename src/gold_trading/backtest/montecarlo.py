@@ -155,8 +155,8 @@ def run_monte_carlo(
     dd_p50 = float(np.percentile(max_dds, 50))
     dd_p95 = float(np.percentile(max_dds, 95))
 
-    # Validation gate
-    passed = sharpe_p5 >= 0.5 and dd_p95 < 0.15
+    # TradingView deployment gate — strategy must survive worst-case scenarios
+    passed = sharpe_p5 >= 0.5 and dd_p95 < 0.05 and ruin_prob < 0.05
 
     result = MonteCarloResult(
         strategy_id=strategy_id,

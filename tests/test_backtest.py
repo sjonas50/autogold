@@ -105,11 +105,13 @@ class TestBacktestEngine:
 
         # With strong trend and enough data, we should get trades
         if result.total_trades >= 50:
-            # Gate checks: Sharpe >= 1.0, WR >= 45%, trades >= 50, DD < 15%
+            # TradingView gate: Sharpe >= 1.5, WR >= 50%, DD < 5%, PF >= 1.3
+            pf = result.profit_factor if result.profit_factor else 0.0
             expected_pass = (
-                result.sharpe_ratio >= 1.0
-                and result.win_rate >= 0.45
-                and result.max_drawdown < 0.15
+                result.sharpe_ratio >= 1.5
+                and result.win_rate >= 0.50
+                and result.max_drawdown < 0.05
+                and pf >= 1.3
             )
             assert result.passed_gate == expected_pass
 

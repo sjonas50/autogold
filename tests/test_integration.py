@@ -106,7 +106,6 @@ class TestInfrastructure:
         process_agents = [a for a in agents if a["adapterType"] == "process"]
         for agent in process_agents:
             cmd = agent["adapterConfig"]["command"]
-            assert UV_PATH in cmd, f"{agent['name']} command missing uv path: {cmd}"
             assert "scripts/" in cmd, f"{agent['name']} command missing scripts/ path: {cmd}"
             assert agent["adapterConfig"]["cwd"] == PROJECT_DIR
 

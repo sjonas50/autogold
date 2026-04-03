@@ -376,7 +376,9 @@ async def main() -> None:
             backtest_params=bt_params,
             mc_sharpe_p5=mc_result.sharpe_p5 if mc_result else None,
             mc_sharpe_p50=mc_result.sharpe_p50 if mc_result else None,
-            status="pending_deployment" if bt_result.passed_gate else "retired",
+            status="pending_deployment"
+            if bt_result.passed_gate and (mc_result is None or mc_result.passed_gate)
+            else "retired",
         )
         await upsert_strategy(conn, strategy)
 
