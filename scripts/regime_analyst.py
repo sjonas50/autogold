@@ -166,41 +166,17 @@ def classify_regime_hmm(
     return state, confidence
 
 
-async def load_ohlcv(conn: asyncpg.Connection, bars: int = 200) -> pd.DataFrame | None:
-    """Load recent 5m OHLCV data from TimescaleDB."""
-    rows = await conn.fetch(
-        """
-        SELECT timestamp, open, high, low, close, volume
-        FROM ohlcv_5m
-        WHERE instrument = 'GC'
-        ORDER BY timestamp DESC
-        LIMIT $1
-        """,
-        bars,
-    )
-
-    if not rows:
-        return None
-
-    df = pd.DataFrame([dict(r) for r in rows])
-    df = df.sort_values("timestamp").reset_index(drop=True)
-
-    # Convert Decimal to float
-    for col in ["open", "high", "low", "close"]:
-        df[col] = df[col].astype(float)
-    df["volume"] = df["volume"].astype(int)
-
-    return df
-
-
 async def main() -> None:
     """Main heartbeat execution."""
     logger.info("Regime Analyst heartbeat starting")
 
     conn = await asyncpg.connect(get_database_url())
     try:
-        # Load OHLCV data
-        df = await load_ohlcv(conn, bars=200)
+        # Load multi-timeframe OHLCV data
+        from gold_trading.db.queries.ohlcv import get_multi_timeframe
+
+        mtf = await get_multi_timeframe(conn, bars_5m=200, bars_15m=200, bars_1h=200, bars_daily=50)
+        df = mtf.get("5m")
 
         if df is None or len(df) < 30:
             logger.warning(
@@ -262,6 +238,94 @@ async def main() -> None:
             regime, confidence = classify_regime_thresholds(atr_14, adx_14, atr_50_avg, return_5bar)
 
         # Write to regime_state
+        # Multi-timeframe confirmation BEFORE writing to DB
+        htf_context = {}
+        df_15m = mtf.get("15m")
+        df_1h = mtf.get("1h")
+        df_daily = mtf.get("daily")
+
+        if df_15m is not None and len(df_15m) >= 20:
+            df_15m["atr_14"] = calculate_atr(df_15m, period=14)
+            df_15m["adx_14"] = calculate_adx(df_15m, period=14)
+            m15_adx = float(df_15m["adx_14"].iloc[-1]) if pd.notna(df_15m["adx_14"].iloc[-1]) else 0
+            m15_return = (
+                float(df_15m["close"].iloc[-1] - df_15m["close"].iloc[-6])
+                if len(df_15m) >= 6
+                else 0
+            )
+            m15_trend = "up" if m15_return > 0 else "down" if m15_return < 0 else "flat"
+            htf_context["15m"] = {
+                "adx": round(m15_adx, 1),
+                "trend": m15_trend,
+                "return": round(m15_return, 2),
+            }
+            logger.info(
+                f"15m context: ADX={m15_adx:.1f}, trend={m15_trend}, return={m15_return:.2f}"
+            )
+
+        if df_1h is not None and len(df_1h) >= 20:
+            df_1h["atr_14"] = calculate_atr(df_1h, period=14)
+            df_1h["adx_14"] = calculate_adx(df_1h, period=14)
+            h1_adx = float(df_1h["adx_14"].iloc[-1]) if pd.notna(df_1h["adx_14"].iloc[-1]) else 0
+            h1_return = (
+                float(df_1h["close"].iloc[-1] - df_1h["close"].iloc[-6]) if len(df_1h) >= 6 else 0
+            )
+            h1_trend = "up" if h1_return > 0 else "down" if h1_return < 0 else "flat"
+            htf_context["1h"] = {
+                "adx": round(h1_adx, 1),
+                "trend": h1_trend,
+                "return": round(h1_return, 2),
+            }
+            logger.info(f"1H context: ADX={h1_adx:.1f}, trend={h1_trend}, return={h1_return:.2f}")
+
+        if df_daily is not None and len(df_daily) >= 10:
+            daily_return_5d = (
+                float(df_daily["close"].iloc[-1] - df_daily["close"].iloc[-6])
+                if len(df_daily) >= 6
+                else 0
+            )
+            daily_return_20d = (
+                float(df_daily["close"].iloc[-1] - df_daily["close"].iloc[-21])
+                if len(df_daily) >= 21
+                else 0
+            )
+            htf_context["daily"] = {
+                "return_5d": round(daily_return_5d, 2),
+                "return_20d": round(daily_return_20d, 2),
+                "trend": "up" if daily_return_20d > 0 else "down",
+            }
+            logger.info(
+                f"Daily context: 5d return=${daily_return_5d:.2f}, 20d return=${daily_return_20d:.2f}"
+            )
+
+        # Adjust confidence based on multi-TF alignment
+        agreement_count = 0
+        total_htf = 0
+        for tf_key in ["15m", "1h"]:
+            if htf_context.get(tf_key):
+                total_htf += 1
+                tf_trend = htf_context[tf_key]["trend"]
+                if regime in ("trending_up", "trending_down"):
+                    expected = "up" if regime == "trending_up" else "down"
+                    if tf_trend == expected:
+                        agreement_count += 1
+        if htf_context.get("daily"):
+            total_htf += 1
+            if regime in ("trending_up", "trending_down") and htf_context["daily"]["trend"] == (
+                "up" if regime == "trending_up" else "down"
+            ):
+                agreement_count += 1
+        if total_htf > 0:
+            alignment_ratio = agreement_count / total_htf
+            if alignment_ratio >= 0.67:
+                confidence = min(confidence * 1.2, 0.99)
+                logger.info(
+                    f"Multi-TF alignment: {agreement_count}/{total_htf} agree — boosting confidence"
+                )
+            elif alignment_ratio == 0:
+                confidence *= 0.6
+                logger.warning(f"Multi-TF conflict: 0/{total_htf} agree — reducing confidence")
+
         state = RegimeState(
             regime=regime,
             hmm_state=hmm_state,
@@ -285,13 +349,17 @@ async def main() -> None:
                     "return_5bar": round(return_5bar, 4),
                     "bars_loaded": len(df),
                     "method": "hmm" if hmm_state is not None else "threshold",
+                    "htf_context": htf_context,
                 },
                 decision=regime,
                 reasoning=(
-                    f"ATR(14)={atr_14:.4f}, ADX(14)={adx_14:.1f}, "
-                    f"5-bar return={return_5bar:.2f}. "
-                    f"{'HMM state ' + str(hmm_state) if hmm_state is not None else 'Threshold-based'}. "
-                    f"Classification: {regime} with confidence {confidence:.2f}."
+                    f"5m: ATR={atr_14:.4f}, ADX={adx_14:.1f}, return={return_5bar:.2f}. "
+                    f"{'HMM state ' + str(hmm_state) if hmm_state is not None else 'Threshold'}. "
+                    f"15m: {htf_context.get('15m', 'N/A')}. "
+                    f"1H: {htf_context.get('1h', 'N/A')}. "
+                    f"Daily: {htf_context.get('daily', 'N/A')}. "
+                    f"MTF alignment: {agreement_count}/{total_htf}. "
+                    f"Regime: {regime}, confidence {confidence:.2f}."
                 ),
                 confidence=round(confidence, 2),
             ),
