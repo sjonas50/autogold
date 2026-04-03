@@ -127,11 +127,9 @@ async def simulate_exit(
     )
     await insert_trade_journal(conn, journal_entry)
 
+    r_str = f" | R: {r_mult:.2f}R" if r_mult else ""
     logger.info(
         f"Paper trade closed: {trade.direction} {trade.contracts}x {trade.instrument} "
-        f"@ {exit_price:.2f} | PnL: ${pnl:.2f} | R: {r_mult:.2f}R"
-        if r_mult
-        else f"Paper trade closed: {trade.direction} {trade.contracts}x {trade.instrument} "
-        f"@ {exit_price:.2f} | PnL: ${pnl:.2f}"
+        f"@ {exit_price:.2f} | PnL: ${pnl:.2f}{r_str}"
     )
     return journal_entry

@@ -10,6 +10,7 @@ Run manually: uv run python scripts/regime_analyst.py
 """
 
 import asyncio
+import hashlib
 import pickle
 from pathlib import Path
 
@@ -67,7 +68,9 @@ def calculate_adx(df: pd.DataFrame, period: int = 14) -> pd.Series:
     down_move = low.shift(1) - low
 
     plus_dm = pd.Series(np.where((up_move > down_move) & (up_move > 0), up_move, 0), index=df.index)
-    minus_dm = pd.Series(np.where((down_move > up_move) & (down_move > 0), down_move, 0), index=df.index)
+    minus_dm = pd.Series(
+        np.where((down_move > up_move) & (down_move > 0), down_move, 0), index=df.index
+    )
 
     # True Range
     tr = pd.concat(
@@ -134,6 +137,17 @@ def classify_regime_hmm(
     Returns:
         Tuple of (hmm_state_index, confidence).
     """
+    # Validate model file hash before deserializing
+    model_hash_path = model_path.with_suffix(".sha256")
+    if model_hash_path.exists():
+        expected_hash = model_hash_path.read_text().strip()
+        actual_hash = hashlib.sha256(model_path.read_bytes()).hexdigest()
+        if actual_hash != expected_hash:
+            raise RuntimeError(
+                f"HMM model file hash mismatch. Expected {expected_hash}, got {actual_hash}. "
+                "File may be corrupted or tampered with."
+            )
+
     with open(model_path, "rb") as f:
         model = pickle.load(f)
 
@@ -232,9 +246,7 @@ async def main() -> None:
                 )
         else:
             logger.info("HMM model not found — using threshold-based classification")
-            regime, confidence = classify_regime_thresholds(
-                atr_14, adx_14, atr_50_avg, return_5bar
-            )
+            regime, confidence = classify_regime_thresholds(atr_14, adx_14, atr_50_avg, return_5bar)
 
         # Write to regime_state
         state = RegimeState(
@@ -276,8 +288,7 @@ async def main() -> None:
         previous = await get_latest_regime(conn)
         if previous and previous.regime != regime:
             logger.warning(
-                f"Regime changed: {previous.regime} → {regime} "
-                f"(ATR={atr_14:.4f}, ADX={adx_14:.1f})"
+                f"Regime changed: {previous.regime} → {regime} (ATR={atr_14:.4f}, ADX={adx_14:.1f})"
             )
 
         logger.info(

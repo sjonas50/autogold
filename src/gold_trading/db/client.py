@@ -22,7 +22,7 @@ def get_database_url() -> str:
 async def get_pool() -> asyncpg.Pool:
     """Get or create the connection pool."""
     global _pool
-    if _pool is None or _pool._closed:
+    if _pool is None or getattr(_pool, "_closed", True):
         _pool = await asyncpg.create_pool(
             get_database_url(),
             min_size=2,
@@ -36,7 +36,7 @@ async def get_pool() -> asyncpg.Pool:
 async def close_pool() -> None:
     """Close the connection pool."""
     global _pool
-    if _pool is not None and not _pool._closed:
+    if _pool is not None and not getattr(_pool, "_closed", True):
         await _pool.close()
         _pool = None
         logger.info("Database connection pool closed")

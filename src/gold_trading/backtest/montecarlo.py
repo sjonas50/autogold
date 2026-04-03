@@ -7,7 +7,6 @@ Block bootstrap preserves autocorrelation in trade sequences (e.g., streaks
 of wins/losses that occur in trending regimes).
 """
 
-
 import numpy as np
 from loguru import logger
 

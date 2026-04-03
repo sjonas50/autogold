@@ -13,11 +13,11 @@ import os
 
 import anthropic
 import asyncpg
-import numpy as np
 import pandas as pd
 from loguru import logger
 
 from gold_trading.backtest.engine import (
+    StrategySignals,
     generate_breakout_signals,
     generate_mean_reversion_signals,
     run_backtest,
@@ -35,6 +35,42 @@ from gold_trading.models.lesson import DecisionLogEntry
 from gold_trading.models.strategy import Strategy
 
 ANTHROPIC_MODEL = "claude-sonnet-4-6"
+
+
+def _extract_trade_pnls(
+    ohlcv: pd.DataFrame,
+    signals: "StrategySignals",
+    instrument: str = "GC",
+) -> list[float]:
+    """Extract actual per-trade P&Ls from a vectorbt backtest.
+
+    Returns list of P&L values in USD, preserving autocorrelation and
+    tail distribution for realistic Monte Carlo simulation.
+    """
+    import vectorbt as vbt
+
+    from gold_trading.backtest.engine import COMMISSION_PER_CONTRACT, SLIPPAGE_PCT
+
+    close = ohlcv["close"].astype(float)
+    multiplier = 100.0 if instrument == "GC" else 10.0
+
+    pf = vbt.Portfolio.from_signals(
+        close,
+        entries=signals.entries,
+        exits=signals.exits,
+        size=1.0,
+        size_type="amount",
+        init_cash=50_000.0,
+        fees=COMMISSION_PER_CONTRACT / (close.mean() * multiplier),
+        slippage=SLIPPAGE_PCT,
+        freq="5min",
+    )
+
+    trades = pf.trades.records_readable
+    if trades is None or len(trades) == 0:
+        return []
+
+    return [float(pnl) for pnl in trades["PnL"]]
 
 
 async def load_ohlcv_data(conn: asyncpg.Connection, bars: int = 25000) -> pd.DataFrame | None:
@@ -79,7 +115,9 @@ async def gather_context(conn: asyncpg.Connection) -> dict:
 
     return {
         "regime": regime.regime if regime else "unknown",
-        "regime_confidence": float(regime.hmm_confidence) if regime and regime.hmm_confidence else 0.5,
+        "regime_confidence": float(regime.hmm_confidence)
+        if regime and regime.hmm_confidence
+        else 0.5,
         "atr_14": float(regime.atr_14) if regime and regime.atr_14 else None,
         "adx_14": float(regime.adx_14) if regime and regime.adx_14 else None,
         "macro_regime": macro.macro_regime if macro else "unknown",
@@ -119,17 +157,17 @@ async def generate_pine_script(context: dict, corpus_chunks: list[dict]) -> dict
     prompt = f"""You are a quantitative Pine Script v6 developer for gold futures (GC/MGC).
 
 ## Current Market Context
-- Regime: {context.get('regime')} (confidence: {context.get('regime_confidence', 0.5):.0%})
-- ATR(14): {context.get('atr_14', 'N/A')}
-- ADX(14): {context.get('adx_14', 'N/A')}
-- Macro regime: {context.get('macro_regime', 'unknown')}
+- Regime: {context.get("regime")} (confidence: {context.get("regime_confidence", 0.5):.0%})
+- ATR(14): {context.get("atr_14", "N/A")}
+- ADX(14): {context.get("adx_14", "N/A")}
+- Macro regime: {context.get("macro_regime", "unknown")}
 - Strategy focus: {strategy_focus}
 
 ## Lessons from Past Trades
-{lessons_text or 'No lessons yet.'}
+{lessons_text or "No lessons yet."}
 
 ## Existing Strategies (avoid duplicating)
-{', '.join(context.get('existing_strategies', [])) or 'None'}
+{", ".join(context.get("existing_strategies", [])) or "None"}
 
 ## Pine Script v6 Reference
 {rag_context}
@@ -236,24 +274,18 @@ async def main() -> None:
         bt_result = run_backtest(ohlcv, signals, instrument="GC")
         bt_result.strategy_id = strategy_id
 
-        # Run Monte Carlo if backtest passes minimum bar
+        # Run Monte Carlo if backtest has enough trades
         mc_result = None
         if bt_result.total_trades >= 20:
-            # Extract trade P&Ls from the backtest
-            # Simplified: generate synthetic trade P&Ls from the backtest stats
-            avg_win = bt_result.expectancy_usd * 2 if bt_result.win_rate > 0 else 100
-            avg_loss = -abs(bt_result.expectancy_usd) if bt_result.win_rate < 1 else -50
-            rng = np.random.default_rng(42)
-            trade_pnls = [
-                avg_win if rng.random() < bt_result.win_rate else avg_loss
-                for _ in range(bt_result.total_trades)
-            ]
+            # Extract actual trade P&Ls from the vectorbt backtest
+            trade_pnls = _extract_trade_pnls(ohlcv, signals, instrument="GC")
 
-            mc_result = run_monte_carlo(
-                trade_pnls,
-                strategy_id=strategy_id,
-                n_iterations=1000,
-            )
+            if len(trade_pnls) >= 10:
+                mc_result = run_monte_carlo(
+                    trade_pnls,
+                    strategy_id=strategy_id,
+                    n_iterations=1000,
+                )
 
         # Save strategy
         strategy = Strategy(

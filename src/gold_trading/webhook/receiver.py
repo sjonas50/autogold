@@ -71,4 +71,6 @@ async def receive_signal(payload: WebhookPayload) -> SignalResponse:
                 signal_id=str(journal_entry.id) if journal_entry else None,
             )
 
-        return SignalResponse(status="rejected", rejection_reason=f"Unknown action: {payload.action}")
+        return SignalResponse(
+            status="rejected", rejection_reason=f"Unknown action: {payload.action}"
+        )

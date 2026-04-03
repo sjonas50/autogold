@@ -31,3 +31,4 @@ node_modules/
 # Generated Pine Script (track individually, not bulk)
 pine/generated/*.pine
 !pine/generated/.gitkeep
+.paperclip-server/

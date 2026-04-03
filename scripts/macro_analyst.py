@@ -66,18 +66,16 @@ async def fetch_fred_series(series_id: str, api_key: str) -> float | None:
 
 
 async def fetch_all_fred_data(api_key: str) -> dict[str, float | None]:
-    """Fetch all FRED series in parallel."""
+    """Fetch all FRED series concurrently."""
+    import asyncio
 
-    results = {}
-    tasks = []
+    async def _fetch(field_name: str, series_id: str) -> tuple[str, float | None]:
+        value = await fetch_fred_series(series_id, api_key)
+        return field_name, value
 
-    for series_id, field_name in FRED_SERIES.items():
-        tasks.append((field_name, fetch_fred_series(series_id, api_key)))
-
-    for field_name, coro in tasks:
-        results[field_name] = await coro
-
-    return results
+    tasks = [_fetch(field_name, series_id) for series_id, field_name in FRED_SERIES.items()]
+    results_list = await asyncio.gather(*tasks)
+    return dict(results_list)
 
 
 async def classify_macro_regime(
@@ -98,14 +96,14 @@ async def classify_macro_regime(
     prompt = f"""You are a gold macro analyst. Based on the following economic data, classify the current macro regime for gold as one of: bullish, neutral, or bearish.
 
 Current data:
-- USD Index (DXY proxy): {data.get('dxy', 'N/A')}
-- 10-Year Real Yield (TIPS): {data.get('real_yield_10y', 'N/A')}%
-- CPI YoY: {data.get('cpi_yoy', 'N/A')}%
-- 10-Year Breakeven Inflation: {data.get('breakeven_10y', 'N/A')}%
-- WTI Oil: ${data.get('oil_wti', 'N/A')}
-- London Gold PM Fix: ${data.get('gold_fix_pm', 'N/A')}
+- USD Index (DXY proxy): {data.get("dxy", "N/A")}
+- 10-Year Real Yield (TIPS): {data.get("real_yield_10y", "N/A")}%
+- CPI YoY: {data.get("cpi_yoy", "N/A")}%
+- 10-Year Breakeven Inflation: {data.get("breakeven_10y", "N/A")}%
+- WTI Oil: ${data.get("oil_wti", "N/A")}
+- London Gold PM Fix: ${data.get("gold_fix_pm", "N/A")}
 
-Previous regime: {previous_regime or 'None (first classification)'}
+Previous regime: {previous_regime or "None (first classification)"}
 
 Key relationships for gold:
 - Gold is inversely correlated with real yields (falling real yields = bullish gold)
@@ -153,7 +151,9 @@ async def main() -> None:
 
     # Fetch FRED data
     fred_data = await fetch_all_fred_data(fred_api_key)
-    logger.info(f"FRED data fetched: {json.dumps({k: v for k, v in fred_data.items() if v is not None})}")
+    logger.info(
+        f"FRED data fetched: {json.dumps({k: v for k, v in fred_data.items() if v is not None})}"
+    )
 
     # Get previous regime for context
     conn = await asyncpg.connect(get_database_url())
@@ -185,9 +185,7 @@ async def main() -> None:
             DecisionLogEntry(
                 agent_name="macro_analyst",
                 decision_type="macro_classification",
-                inputs_summary={
-                    k: v for k, v in fred_data.items() if v is not None
-                },
+                inputs_summary={k: v for k, v in fred_data.items() if v is not None},
                 decision=regime,
                 reasoning=reasoning,
                 confidence=0.7,  # FRED data is reliable but lagged 1-2 days

@@ -77,15 +77,13 @@ def run_backtest(
     else:
         pf = vbt.Portfolio.from_signals(
             close,
-            entries=signals.exits,  # Short: entries are sells
-            exits=signals.entries,  # Short: exits are buys
+            short_entries=signals.entries,
+            short_exits=signals.exits,
             size=size,
             size_type="amount",
             init_cash=initial_capital,
             fees=COMMISSION_PER_CONTRACT / (close.mean() * multiplier),
             slippage=SLIPPAGE_PCT,
-            short_entries=signals.entries,
-            short_exits=signals.exits,
             freq="5min",
         )
 
@@ -172,7 +170,6 @@ def generate_breakout_signals(
 
     # Range high/low
     range_high = high.rolling(lookback).max().shift(1)
-
 
     # ATR
     tr = pd.concat(

@@ -95,9 +95,7 @@ async def fetch_polygon_news(
         if ticker_match or keyword_match:
             gold_articles.append(article)
 
-    logger.info(
-        f"Polygon.io: {len(articles)} total articles, {len(gold_articles)} gold-relevant"
-    )
+    logger.info(f"Polygon.io: {len(articles)} total articles, {len(gold_articles)} gold-relevant")
     return gold_articles
 
 
@@ -125,7 +123,7 @@ async def score_headlines_batch(
 
     # Format headlines for the prompt
     headline_list = "\n".join(
-        f"{i+1}. [{h.get('source', {}).get('name', 'Unknown')}] {h.get('title', '')}"
+        f"{i + 1}. [{h.get('source', {}).get('name', 'Unknown')}] {h.get('title', '')}"
         for i, h in enumerate(headlines)
     )
 
@@ -224,7 +222,9 @@ async def main() -> None:
         sentiment_scores.append(
             SentimentScore(
                 headline=article.get("title", "")[:500],
-                source=article.get("publisher", {}).get("name") if isinstance(article.get("publisher"), dict) else str(article.get("publisher", "")),
+                source=article.get("publisher", {}).get("name")
+                if isinstance(article.get("publisher"), dict)
+                else str(article.get("publisher", "")),
                 url=article.get("article_url"),
                 published_at=published,
                 sentiment=article.get("sentiment", 0.0),

@@ -81,7 +81,7 @@ class TestMacroDBIntegration:
                 MacroData(
                     observation_date=date(2026, 4, 1 + i),
                     macro_regime=regime,
-                    reasoning=f"Day {i+1}",
+                    reasoning=f"Day {i + 1}",
                 ),
             )
 

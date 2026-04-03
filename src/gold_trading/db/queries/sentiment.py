@@ -1,5 +1,6 @@
 """Database queries for sentiment_scores table."""
 
+import json as _json
 from uuid import UUID
 
 import asyncpg
@@ -102,7 +103,7 @@ async def get_recent_scores(conn: asyncpg.Connection, limit: int = 20) -> list[S
             **{
                 **dict(r),
                 "raw_response": (
-                    __import__("json").loads(r["raw_response"]) if r["raw_response"] else None
+                    _json.loads(r["raw_response"]) if r["raw_response"] else None
                 ),
             }
         )

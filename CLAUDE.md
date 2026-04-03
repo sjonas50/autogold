@@ -1,6 +1,6 @@
 # Gold Futures Trading System
 
-Autonomous gold futures (GC/MGC) trading system orchestrated by Paperclip with 7 AI agents (all Claude Sonnet 4.6). Backtest + paper trade scope only.
+Autonomous gold futures (GC/MGC) trading system orchestrated by Paperclip with 7 AI agents (all Claude Sonnet 4.6). Backtest + paper trade scope only.  Ensure no mock data is used.  All systems must be hooked up properly to work live.  If you have questions, search the web or the official github repos or documentation, do not make assumptions. Current date is april 3, 2026.
 
 ## Quick Reference
 

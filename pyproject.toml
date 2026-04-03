@@ -40,7 +40,7 @@ build-backend = "hatchling.build"
 packages = ["src/gold_trading"]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 line-length = 100
 src = ["src", "scripts", "tests"]
 

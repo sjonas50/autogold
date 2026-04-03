@@ -1,6 +1,7 @@
 """Signal validation — orchestrates secret check, idempotency, and risk rules."""
 
 import hashlib
+import hmac
 import os
 
 import asyncpg
@@ -32,7 +33,7 @@ def validate_secret(payload: WebhookPayload) -> bool:
     if not expected:
         logger.warning("WEBHOOK_SECRET not set — accepting all signals (dev mode)")
         return True
-    return payload.secret == expected
+    return hmac.compare_digest(payload.secret, expected)
 
 
 async def validate_signal(
@@ -123,7 +124,9 @@ async def validate_signal(
             risk_check_passed=False,
         )
 
-    logger.info(f"Signal accepted: {payload.strategy_id} {payload.action} {payload.contracts}x {payload.instrument}")
+    logger.info(
+        f"Signal accepted: {payload.strategy_id} {payload.action} {payload.contracts}x {payload.instrument}"
+    )
     return SignalValidation(
         accepted=True,
         idempotency_key=idem_key,

@@ -1,6 +1,5 @@
 """Tests for the FastAPI webhook endpoint — integration tests against real DB."""
 
-
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -27,9 +26,7 @@ class TestWebhookEndpoint:
         """Health check returns ok."""
         from gold_trading.main import app
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get("/health")
             assert resp.status_code == 200
             assert resp.json()["status"] == "ok"
@@ -38,9 +35,7 @@ class TestWebhookEndpoint:
         """Missing required fields return 422."""
         from gold_trading.main import app
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.post("/webhook/signal", json={"secret": "test"})
             assert resp.status_code == 422
 
@@ -48,9 +43,7 @@ class TestWebhookEndpoint:
         """Valid payload shape is accepted by Pydantic (even if risk rejects it)."""
         from gold_trading.main import app
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.post(
                 "/webhook/signal",
                 json={
