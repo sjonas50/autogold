@@ -110,8 +110,18 @@ async def gather_context(conn: asyncpg.Connection) -> dict:
         logger.warning(f"Could not query lessons: {e}")
         lessons = []
 
-    # Get existing strategies to avoid duplicates
+    # Get ALL strategies (including retired) to learn from failures
     existing = await get_strategies_by_status(conn, ["active", "pending_deployment", "paused"])
+    all_strategies = await conn.fetch(
+        """
+        SELECT id, strategy_class, vbt_sharpe, vbt_win_rate, vbt_max_drawdown, status
+        FROM strategies ORDER BY created_at DESC LIMIT 10
+        """
+    )
+    past_results = [
+        f"{r['id']}: {r['strategy_class']}, Sharpe={r['vbt_sharpe']}, WR={r['vbt_win_rate']}, status={r['status']}"
+        for r in all_strategies
+    ]
 
     return {
         "regime": regime.regime if regime else "unknown",
@@ -123,6 +133,7 @@ async def gather_context(conn: asyncpg.Connection) -> dict:
         "macro_regime": macro.macro_regime if macro else "unknown",
         "lessons": [lesson.content for lesson in lessons],
         "existing_strategies": [s.id for s in existing],
+        "past_results": past_results,
     }
 
 
@@ -168,6 +179,9 @@ async def generate_pine_script(context: dict, corpus_chunks: list[dict]) -> dict
 
 ## Existing Strategies (avoid duplicating)
 {", ".join(context.get("existing_strategies", [])) or "None"}
+
+## Past Strategy Results (learn from failures — try a DIFFERENT approach)
+{chr(10).join(context.get("past_results", [])) or "No past strategies yet."}
 
 ## Pine Script v6 Reference
 {rag_context}
@@ -290,17 +304,34 @@ async def main() -> None:
             logger.error("Pine Script generation failed")
             return
 
-        strategy_id = generated.get("id", f"gs_auto_{context['regime']}")
+        # Generate unique strategy ID (append attempt number)
+        base_id = generated.get("id", f"gs_auto_{context['regime']}")
+        existing_ids = context.get("existing_strategies", [])
+        attempt = sum(1 for eid in existing_ids if eid.startswith(base_id.rsplit("_a", 1)[0])) + 1
+        strategy_id = f"{base_id}_a{attempt}" if attempt > 1 else base_id
         pine_script = generated.get("pine_script", "")
         strategy_class = generated.get("strategy_class", "breakout")
 
-        logger.info(f"Generated strategy: {strategy_id} ({strategy_class})")
+        logger.info(f"Generated strategy: {strategy_id} ({strategy_class}), attempt #{attempt}")
 
-        # Run built-in backtest with appropriate signals
+        # Vary signal parameters based on attempt number to explore the parameter space
+        # Each attempt uses different lookback/threshold combos
+        import random
+
+        rng = random.Random(attempt + hash(strategy_id))
+
         if strategy_class in ("breakout", "momentum"):
-            signals = generate_breakout_signals(ohlcv)
+            lookback = rng.choice([6, 9, 12, 18, 24])
+            atr_mult = rng.choice([1.0, 1.5, 2.0, 2.5, 3.0])
+            signals = generate_breakout_signals(ohlcv, lookback=lookback, atr_multiplier=atr_mult)
+            logger.info(f"Breakout params: lookback={lookback}, atr_mult={atr_mult}")
         else:
-            signals = generate_mean_reversion_signals(ohlcv)
+            vwap_period = rng.choice([24, 36, 48, 72, 96])
+            entry_thresh = rng.choice([1.0, 1.5, 2.0, 2.5, 3.0])
+            signals = generate_mean_reversion_signals(
+                ohlcv, vwap_period=vwap_period, entry_threshold=entry_thresh
+            )
+            logger.info(f"MeanRev params: vwap_period={vwap_period}, entry_thresh={entry_thresh}")
 
         bt_result = run_backtest(ohlcv, signals, instrument="GC")
         bt_result.strategy_id = strategy_id
