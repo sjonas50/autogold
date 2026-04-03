@@ -20,7 +20,7 @@ from gold_trading.db.client import get_database_url
 from gold_trading.embeddings.client import embed_texts_batch
 
 REPO_URL = "https://github.com/codenamedevan/pinescriptv6.git"
-MAX_CHUNK_TOKENS = 800  # Approximate token limit per chunk
+MAX_CHUNK_TOKENS = 500  # Stay well under 8192 token API limit
 OVERLAP_LINES = 5
 
 
@@ -269,4 +269,7 @@ async def search_corpus(
 
 
 if __name__ == "__main__":
+    from dotenv import load_dotenv
+
+    load_dotenv()
     asyncio.run(ingest_corpus())

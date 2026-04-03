@@ -102,9 +102,7 @@ async def get_recent_scores(conn: asyncpg.Connection, limit: int = 20) -> list[S
         SentimentScore(
             **{
                 **dict(r),
-                "raw_response": (
-                    _json.loads(r["raw_response"]) if r["raw_response"] else None
-                ),
+                "raw_response": (_json.loads(r["raw_response"]) if r["raw_response"] else None),
             }
         )
         for r in rows

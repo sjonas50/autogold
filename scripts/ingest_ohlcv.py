@@ -167,7 +167,9 @@ async def fetch_polygon(days: int = 365) -> pd.DataFrame:
                     }
                 )
 
-            logger.info(f"Fetched {len(results)} bars for {current_start.date()} to {chunk_end.date()}")
+            logger.info(
+                f"Fetched {len(results)} bars for {current_start.date()} to {chunk_end.date()}"
+            )
             current_start = chunk_end
 
     if not all_bars:
@@ -230,4 +232,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    from dotenv import load_dotenv
+
+    load_dotenv()
     asyncio.run(main())
