@@ -7,13 +7,16 @@ from gold_trading.models.strategy import Strategy
 
 async def upsert_strategy(conn: asyncpg.Connection, strategy: Strategy) -> str:
     """Insert or update a strategy."""
+    import json
+
     await conn.execute(
         """
         INSERT INTO strategies
             (id, name, version, pine_script, instrument, timeframe, strategy_class,
              vbt_sharpe, vbt_win_rate, vbt_expectancy, vbt_max_drawdown,
+             vbt_total_trades, vbt_profit_factor, vbt_avg_duration_min, backtest_params,
              mc_sharpe_p5, mc_sharpe_p50, status, is_active, cio_recommendation)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
         ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
             version = EXCLUDED.version,
@@ -22,6 +25,10 @@ async def upsert_strategy(conn: asyncpg.Connection, strategy: Strategy) -> str:
             vbt_win_rate = EXCLUDED.vbt_win_rate,
             vbt_expectancy = EXCLUDED.vbt_expectancy,
             vbt_max_drawdown = EXCLUDED.vbt_max_drawdown,
+            vbt_total_trades = EXCLUDED.vbt_total_trades,
+            vbt_profit_factor = EXCLUDED.vbt_profit_factor,
+            vbt_avg_duration_min = EXCLUDED.vbt_avg_duration_min,
+            backtest_params = EXCLUDED.backtest_params,
             mc_sharpe_p5 = EXCLUDED.mc_sharpe_p5,
             mc_sharpe_p50 = EXCLUDED.mc_sharpe_p50,
             status = EXCLUDED.status,
@@ -39,6 +46,10 @@ async def upsert_strategy(conn: asyncpg.Connection, strategy: Strategy) -> str:
         strategy.vbt_win_rate,
         strategy.vbt_expectancy,
         strategy.vbt_max_drawdown,
+        strategy.vbt_total_trades,
+        strategy.vbt_profit_factor,
+        strategy.vbt_avg_duration_min,
+        json.dumps(strategy.backtest_params) if strategy.backtest_params else None,
         strategy.mc_sharpe_p5,
         strategy.mc_sharpe_p50,
         strategy.status,

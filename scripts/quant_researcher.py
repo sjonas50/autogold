@@ -349,7 +349,17 @@ async def main() -> None:
                     n_iterations=1000,
                 )
 
-        # Save strategy
+        # Build params dict for traceability
+        if strategy_class in ("breakout", "momentum"):
+            bt_params = {"lookback": lookback, "atr_multiplier": atr_mult, "type": "breakout"}
+        else:
+            bt_params = {
+                "vwap_period": vwap_period,
+                "entry_threshold": entry_thresh,
+                "type": "mean_reversion",
+            }
+
+        # Save strategy with full metrics
         strategy = Strategy(
             id=strategy_id,
             name=generated.get("name", strategy_id),
@@ -360,6 +370,10 @@ async def main() -> None:
             vbt_win_rate=bt_result.win_rate,
             vbt_expectancy=bt_result.expectancy_usd,
             vbt_max_drawdown=bt_result.max_drawdown,
+            vbt_total_trades=bt_result.total_trades,
+            vbt_profit_factor=bt_result.profit_factor,
+            vbt_avg_duration_min=bt_result.avg_trade_duration_minutes,
+            backtest_params=bt_params,
             mc_sharpe_p5=mc_result.sharpe_p5 if mc_result else None,
             mc_sharpe_p50=mc_result.sharpe_p50 if mc_result else None,
             status="pending_deployment" if bt_result.passed_gate else "retired",

@@ -19,6 +19,10 @@ class Strategy(BaseModel):
     vbt_win_rate: float | None = None
     vbt_expectancy: float | None = None
     vbt_max_drawdown: float | None = None
+    vbt_total_trades: int | None = None
+    vbt_profit_factor: float | None = None
+    vbt_avg_duration_min: float | None = None
+    backtest_params: dict | None = None
     mc_sharpe_p5: float | None = None
     mc_sharpe_p50: float | None = None
     status: str = Field(

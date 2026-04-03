@@ -67,10 +67,7 @@ async def embed_texts_batch(texts: list[str], batch_size: int = 50) -> list[list
 
     # Sanitize: truncate oversized texts and replace empty strings
     max_chars = 30000
-    texts = [
-        (t[:max_chars] if len(t) > max_chars else t) if t.strip() else " "
-        for t in texts
-    ]
+    texts = [(t[:max_chars] if len(t) > max_chars else t) if t.strip() else " " for t in texts]
 
     all_embeddings: list[list[float]] = []
 
