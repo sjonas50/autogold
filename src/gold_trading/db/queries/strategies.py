@@ -1,8 +1,18 @@
 """Database queries for strategies table."""
 
+import json as _json
+
 import asyncpg
 
 from gold_trading.models.strategy import Strategy
+
+
+def _parse_strategy_row(row: asyncpg.Record) -> Strategy:
+    """Parse a strategy row, handling JSONB backtest_params."""
+    data = dict(row)
+    if isinstance(data.get("backtest_params"), str):
+        data["backtest_params"] = _json.loads(data["backtest_params"])
+    return Strategy(**data)
 
 
 async def upsert_strategy(conn: asyncpg.Connection, strategy: Strategy) -> str:
@@ -64,7 +74,7 @@ async def get_strategy(conn: asyncpg.Connection, strategy_id: str) -> Strategy |
     row = await conn.fetchrow("SELECT * FROM strategies WHERE id = $1", strategy_id)
     if row is None:
         return None
-    return Strategy(**dict(row))
+    return _parse_strategy_row(row)
 
 
 async def get_active_strategies(conn: asyncpg.Connection) -> list[Strategy]:
@@ -72,7 +82,7 @@ async def get_active_strategies(conn: asyncpg.Connection) -> list[Strategy]:
     rows = await conn.fetch(
         "SELECT * FROM strategies WHERE is_active = true ORDER BY created_at DESC"
     )
-    return [Strategy(**dict(r)) for r in rows]
+    return [_parse_strategy_row(r) for r in rows]
 
 
 async def get_strategies_by_status(conn: asyncpg.Connection, statuses: list[str]) -> list[Strategy]:
@@ -81,7 +91,7 @@ async def get_strategies_by_status(conn: asyncpg.Connection, statuses: list[str]
         "SELECT * FROM strategies WHERE status = ANY($1) ORDER BY created_at DESC",
         statuses,
     )
-    return [Strategy(**dict(r)) for r in rows]
+    return [_parse_strategy_row(r) for r in rows]
 
 
 async def set_strategy_active(conn: asyncpg.Connection, strategy_id: str, active: bool) -> None:
