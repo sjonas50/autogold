@@ -26,13 +26,28 @@ from loguru import logger
 
 from gold_trading.db.client import get_database_url
 
+TIMEFRAME_TABLES = {
+    "5m": "ohlcv_5m",
+    "15m": "ohlcv_15m",
+    "1h": "ohlcv_1h",
+    "1day": "ohlcv_daily",
+}
 
-async def ingest_dataframe(df: pd.DataFrame, instrument: str = "GC") -> int:
-    """Load a DataFrame of OHLCV data into the ohlcv_5m table.
+TWELVEDATA_INTERVALS = {
+    "5m": "5min",
+    "15m": "15min",
+    "1h": "1h",
+    "1day": "1day",
+}
+
+
+async def ingest_dataframe(df: pd.DataFrame, instrument: str = "GC", timeframe: str = "5m") -> int:
+    """Load a DataFrame of OHLCV data into the appropriate timeframe table.
 
     Expected columns: timestamp (or index), open, high, low, close, volume.
     Returns number of rows inserted.
     """
+    table = TIMEFRAME_TABLES.get(timeframe, "ohlcv_5m")
     conn = await asyncpg.connect(get_database_url())
     try:
         # Normalize column names
@@ -54,7 +69,7 @@ async def ingest_dataframe(df: pd.DataFrame, instrument: str = "GC") -> int:
         # Remove duplicates
         df = df.drop_duplicates(subset=["timestamp"])
 
-        logger.info(f"Preparing to ingest {len(df)} bars for {instrument}")
+        logger.info(f"Preparing to ingest {len(df)} bars for {instrument} into {table}")
         logger.info(f"Date range: {df['timestamp'].min()} to {df['timestamp'].max()}")
 
         # Batch insert with ON CONFLICT to handle re-runs
@@ -72,8 +87,8 @@ async def ingest_dataframe(df: pd.DataFrame, instrument: str = "GC") -> int:
         ]
 
         await conn.executemany(
-            """
-            INSERT INTO ohlcv_5m (timestamp, instrument, open, high, low, close, volume)
+            f"""
+            INSERT INTO {table} (timestamp, instrument, open, high, low, close, volume)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (timestamp, instrument) DO UPDATE SET
                 open = EXCLUDED.open,
@@ -87,7 +102,7 @@ async def ingest_dataframe(df: pd.DataFrame, instrument: str = "GC") -> int:
 
         # Verify
         count = await conn.fetchrow(
-            "SELECT COUNT(*) as cnt FROM ohlcv_5m WHERE instrument = $1", instrument
+            f"SELECT COUNT(*) as cnt FROM {table} WHERE instrument = $1", instrument
         )
         logger.info(f"Total bars in ohlcv_5m for {instrument}: {count['cnt']}")
         return len(records)
@@ -180,11 +195,11 @@ async def fetch_polygon(days: int = 365) -> pd.DataFrame:
     return df
 
 
-async def fetch_twelvedata(days: int = 365) -> pd.DataFrame:
-    """Fetch 5-minute GC data from Twelve Data.
+async def fetch_twelvedata(days: int = 365, timeframe: str = "5m") -> pd.DataFrame:
+    """Fetch GC data from Twelve Data at any timeframe.
 
     Free tier: 800 API calls/day, 5000 rows per call.
-    Supports deep intraday history (1+ year for 5m).
+    Supports: 5min, 15min, 1h, 1day.
 
     Sign up at https://twelvedata.com for a free API key.
     Set TWELVEDATA_API_KEY in .env.
@@ -197,15 +212,16 @@ async def fetch_twelvedata(days: int = 365) -> pd.DataFrame:
 
     end = datetime.now(UTC)
     all_bars = []
+    interval = TWELVEDATA_INTERVALS.get(timeframe, "5min")
 
     # Twelve Data returns up to 5000 rows per call
-    # For 5m bars, that's ~17 days. We need multiple calls for longer history.
+    bars_per_day_map = {"5m": 288, "15m": 96, "1h": 24, "1day": 1}
     rows_per_call = 5000
-    bars_per_day = 24 * 12  # ~288 5-min bars per day (gold trades 23h)
+    bars_per_day = bars_per_day_map.get(timeframe, 288)
     calls_needed = max(1, (days * bars_per_day) // rows_per_call + 1)
 
     logger.info(
-        f"Fetching {days} days of 5m GC data from Twelve Data ({calls_needed} API calls)..."
+        f"Fetching {days} days of {timeframe} GC data from Twelve Data ({calls_needed} API calls)..."
     )
 
     async with httpx.AsyncClient(timeout=30) as client:
@@ -214,7 +230,7 @@ async def fetch_twelvedata(days: int = 365) -> pd.DataFrame:
         for call_num in range(calls_needed):
             params = {
                 "symbol": "XAU/USD",  # Twelve Data uses forex symbol for gold
-                "interval": "5min",
+                "interval": interval,
                 "outputsize": rows_per_call,
                 "end_date": current_end.strftime("%Y-%m-%d %H:%M:%S"),
                 "apikey": api_key,
@@ -402,7 +418,28 @@ async def main() -> None:
     parser.add_argument("--days", type=int, default=60, help="Days of history to fetch")
     parser.add_argument("--file", type=str, help="CSV file path (for --source csv)")
     parser.add_argument("--instrument", type=str, default="GC", help="Instrument symbol")
+    parser.add_argument(
+        "--timeframe",
+        choices=["5m", "15m", "1h", "1day"],
+        default="5m",
+        help="Timeframe (default: 5m)",
+    )
+    parser.add_argument(
+        "--multi-tf",
+        action="store_true",
+        help="Pull all timeframes (5m, 15m, 1h, daily) in one run",
+    )
     args = parser.parse_args()
+
+    if args.multi_tf and args.source == "twelvedata":
+        # Pull all 4 timeframes from Twelve Data
+        for tf in ["5m", "15m", "1h", "1day"]:
+            logger.info(f"\n=== Fetching {tf} data ===")
+            tf_df = await fetch_twelvedata(args.days, timeframe=tf)
+            count = await ingest_dataframe(tf_df, instrument=args.instrument, timeframe=tf)
+            logger.info(f"{tf}: {count} bars loaded")
+        logger.info("Multi-timeframe ingestion complete")
+        return
 
     if args.source == "all-free":
         # Pull from all available free sources for maximum coverage
@@ -446,7 +483,7 @@ async def main() -> None:
     elif args.source == "yfinance":
         df = fetch_yfinance(args.days)
     elif args.source == "twelvedata":
-        df = await fetch_twelvedata(args.days)
+        df = await fetch_twelvedata(args.days, timeframe=args.timeframe)
     elif args.source == "oanda":
         df = await fetch_oanda_history(args.days)
     elif args.source == "polygon":
@@ -458,8 +495,8 @@ async def main() -> None:
     else:
         parser.error(f"Unknown source: {args.source}")
 
-    count = await ingest_dataframe(df, instrument=args.instrument)
-    logger.info(f"Ingestion complete: {count} bars loaded for {args.instrument}")
+    count = await ingest_dataframe(df, instrument=args.instrument, timeframe=args.timeframe)
+    logger.info(f"Ingestion complete: {count} bars loaded for {args.instrument} ({args.timeframe})")
 
 
 if __name__ == "__main__":
