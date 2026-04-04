@@ -16,18 +16,18 @@ COMPANY_ID = os.environ.get("PAPERCLIP_COMPANY_ID", "3422f81a-8ca2-4ce1-aae5-5cf
 
 # Agent ID registry
 AGENTS = {
-    "cio": "37bbe408-e573-4598-a374-cc369bad0258",
-    "technical_analyst": "e475c802-6bde-4d8e-bb43-602842ae5e7f",
-    "regime_analyst": "47f7e6ee-4e47-4b71-919d-6de9923d1929",
-    "data_pipeline": "b9c1a8e1-f7e5-408f-8311-161f769bb40a",
-    "risk_manager": "80bab3f7-e5ef-40d3-8766-22f26bb394ec",
-    "quant_researcher": "881e708a-b4c2-472d-9c74-af7b515cac23",
-    "walk_forward_validator": "cf64f80f-80e4-4d6f-828a-c96f6d34a4a6",
-    "strategy_monitor": "3a01e631-8fbc-44fa-bb7b-b953b35d66e0",
-    "macro_analyst": "f3fcd8b4-ce00-4d10-b4a5-89719773d8ab",
-    "sentiment_analyst": "fc065152-e720-4cdb-bed1-e8d1ae34d5f1",
-    "economic_calendar": "e10bb9f0-89b5-4d8a-a879-77aed8c6e184",
-    "skill_optimizer": "3201c323-a70d-4fdd-9e57-d771bdba8a61",
+    "cio": "2a732301-8c96-48da-8ae6-c9ef9a4fa517",
+    "technical_analyst": "82c0b931-ac82-42fc-a64c-9b0e46af6770",
+    "regime_analyst": "5c78fc6e-77d9-4310-85e4-3b923422e5df",
+    "data_pipeline": "e28bc80f-222f-44b3-bc91-a0c61dd269b1",
+    "risk_manager": "a68ef205-85f9-4c20-9d47-4ab76c864a47",
+    "quant_researcher": "8b85ccad-060e-4dd8-b007-4eced8098223",
+    "walk_forward_validator": "3548ca9b-b975-40db-a55d-dec060ce79ee",
+    "strategy_monitor": "2d9df290-a460-43f4-ac0c-233f61f65ec9",
+    "macro_analyst": "06ba3cba-5814-4cb5-adfe-d7a63606c0c2",
+    "sentiment_analyst": "88622de5-1b07-4670-9417-363d5217b7e2",
+    "economic_calendar": "3467352e-e643-4285-a3ce-c04b105df898",
+    "skill_optimizer": "82221f8d-03de-425b-8862-6b21bf2fbf0c",
 }
 
 

@@ -1,0 +1,224 @@
+┌   paperclipai run 
+│
+│  Home: /Users/sjonas/.paperclip
+│
+│  Instance: default
+│
+│  Config: /Users/sjonas/.paperclip/instances/default/config.json
+│
+◇  Running doctor checks...
+
+██████╗  █████╗ ██████╗ ███████╗██████╗  ██████╗██╗     ██╗██████╗ 
+██╔══██╗██╔══██╗██╔══██╗██╔════╝██╔══██╗██╔════╝██║     ██║██╔══██╗
+██████╔╝███████║██████╔╝█████╗  ██████╔╝██║     ██║     ██║██████╔╝
+██╔═══╝ ██╔══██║██╔═══╝ ██╔══╝  ██╔══██╗██║     ██║     ██║██╔═══╝ 
+██║     ██║  ██║██║     ███████╗██║  ██║╚██████╗███████╗██║██║     
+╚═╝     ╚═╝  ╚═╝╚═╝     ╚══════╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚═╝╚═╝     
+  ───────────────────────────────────────────────────────
+  Open-source orchestration for zero-human companies
+
+┌   paperclip doctor 
+│
+│  ✓ Config file: Valid config at /Users/sjonas/.paperclip/instances/default/config.json
+│
+│  ✓ Deployment/auth mode: local_trusted mode is configured for loopback-only access
+│
+│  ✓ Agent JWT secret: PAPERCLIP_AGENT_JWT_SECRET is set in environment
+│
+│  ✓ Secrets adapter: Local encrypted provider configured with key file /Users/sjonas/.paperclip/instances/default/secrets/master.key
+│
+│  ✓ Storage: Local disk storage is writable: /Users/sjonas/.paperclip/instances/default/data/storage
+│
+│  ✓ Database: Embedded PostgreSQL configured at /Users/sjonas/.paperclip/instances/default/db (port 54329)
+│
+│  ✓ LLM provider: No LLM provider configured (optional)
+│
+│  ✓ Log directory: Log directory is writable: /Users/sjonas/.paperclip/instances/default/logs
+│
+│  ✓ Server port: Port 3100 is available
+│
+◇  Summary ──╮
+│            │
+│  9 passed  │
+│            │
+├────────────╯
+│
+└  All checks passed!
+
+│
+◇  Starting Paperclip server...
+[00:28:29] [32mINFO[39m: [36mUsing embedded PostgreSQL because no DATABASE_URL set (dataDir=/Users/sjonas/.paperclip/instances/default/db, port=54329)[39m
+[00:28:30] [32mINFO[39m: [36mCreated embedded PostgreSQL database: paperclip[39m
+[00:28:30] [32mINFO[39m: [36mDetected first-run embedded PostgreSQL setup; applying pending migrations automatically[39m
+[00:28:30] [32mINFO[39m: [36mApplying 45 pending migrations for Embedded PostgreSQL[39m [90m{"pendingMigrations":["0000_mature_masked_marvel.sql","0001_fast_northstar.sql","0002_big_zaladane.sql","0003_shallow_quentin_quire.sql","0004_issue_identifiers.sql","0005_chief_luke_cage.sql","0006_overjoyed_mister_sinister.sql","0007_new_quentin_quire.sql","0008_amused_zzzax.sql","0009_fast_jackal.sql","0010_stale_justin_hammer.sql","0011_windy_corsair.sql","0012_perpetual_ser_duncan.sql","0013_dashing_wasp.sql","0014_many_mikhail_rasputin.sql","0015_project_color_archived.sql","0016_agent_icon.sql","0017_tiresome_gabe_jones.sql","0018_flat_sleepwalker.sql","0019_public_victor_mancha.sql","0020_white_anita_blake.sql","0021_chief_vindicator.sql","0022_company_brand_color.sql","0023_fair_lethal_legion.sql","0024_far_beast.sql","0025_nasty_salo.sql","0026_lying_pete_wisdom.sql","0027_tranquil_tenebrous.sql","0028_harsh_goliath.sql","0029_plugin_tables.sql","0030_rich_magneto.sql","0031_zippy_magma.sql","0032_pretty_doctor_octopus.sql","0033_shiny_black_tarantula.sql","0034_fat_dormammu.sql","0035_marvelous_satana.sql","0036_cheerful_nitro.sql","0037_friendly_eddie_brock.sql","0038_careless_iron_monger.sql","0039_fat_magneto.sql","0040_eager_shotgun.sql","0041_curly_maria_hill.sql","0042_spotty_the_renegades.sql","0043_reflective_captain_universe.sql","0044_illegal_toad.sql"]}[39m
+
+[36m██████╗  █████╗ ██████╗ ███████╗██████╗  ██████╗██╗     ██╗██████╗ [0m
+[36m██╔══██╗██╔══██╗██╔══██╗██╔════╝██╔══██╗██╔════╝██║     ██║██╔══██╗[0m
+[36m██████╔╝███████║██████╔╝█████╗  ██████╔╝██║     ██║     ██║██████╔╝[0m
+[36m██╔═══╝ ██╔══██║██╔═══╝ ██╔══╝  ██╔══██╗██║     ██║     ██║██╔═══╝ [0m
+[36m██║     ██║  ██║██║     ███████╗██║  ██║╚██████╗███████╗██║██║     [0m
+[36m╚═╝     ╚═╝  ╚═╝╚═╝     ╚══════╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚═╝╚═╝     [0m
+[34m  ───────────────────────────────────────────────────────[0m
+[2mMode            [0m [32membedded-postgres[0m  |  [35mstatic-ui[0m
+[2mDeploy          [0m local_trusted (private)
+[2mAuth            [0m [32mready[0m
+[2mServer          [0m 3100
+[2mAPI             [0m http://127.0.0.1:3100/api [2m(health: http://127.0.0.1:3100/api/health)[0m
+[2mUI              [0m http://127.0.0.1:3100
+[2mDatabase        [0m /Users/sjonas/.paperclip/instances/default/db [2m(pg:54329)[0m
+[2mMigrations      [0m applied (pending migrations)
+[2mAgent JWT       [0m [32mset[0m
+[2mHeartbeat       [0m enabled [2m(30000ms)[0m
+[2mDB Backup       [0m enabled [2m(every 60m, keep 30d)[0m
+[2mBackup Dir      [0m /Users/sjonas/.paperclip/instances/default/data/backups
+[2mConfig          [0m /Users/sjonas/.paperclip/instances/default/config.json
+[34m  ───────────────────────────────────────────────────────[0m
+
+[00:28:30] [32mINFO[39m: [36mEmbedded PostgreSQL ready[39m
+[00:28:30] [32mINFO[39m: [36mplugin job coordinator started — listening to lifecycle events[39m [90m{"service":"plugin-job-coordinator"}[39m
+[00:28:30] [32mINFO[39m: [36mplugin job scheduler started[39m [90m{"service":"plugin-job-scheduler","tickIntervalMs":30000,"maxConcurrentJobs":10}[39m
+[00:28:30] [32mINFO[39m: [36minitializing plugin tool dispatcher[39m [90m{"service":"plugin-tool-dispatcher"}[39m
+[00:28:30] [32mINFO[39m: [36mplugin-loader: loading all ready plugins[39m [90m{"service":"plugin-loader"}[39m
+[00:28:30] [32mINFO[39m: [36mAutomatic database backups enabled[39m [90m{"intervalMinutes":60,"retentionDays":30,"backupDir":"/Users/sjonas/.paperclip/instances/default/data/backups"}[39m
+[00:28:30] [32mINFO[39m: [36mServer listening on 127.0.0.1:3100[39m
+[00:28:30] [32mINFO[39m: [36mloaded tools from ready plugins[39m [90m{"service":"plugin-tool-dispatcher","readyPlugins":0,"registeredTools":0}[39m
+[00:28:30] [32mINFO[39m: [36mplugin tool dispatcher initialized[39m [90m{"service":"plugin-tool-dispatcher","totalTools":0}[39m
+[00:28:30] [32mINFO[39m: [36mplugin-loader: no ready plugins to load[39m [90m{"service":"plugin-loader"}[39m
+[00:28:52] [32mINFO[39m: [36mGET / 200[39m
+[00:29:19] [32mINFO[39m: [36mGET / 200[39m
+[00:29:19] [32mINFO[39m: [36mGET /assets/index-CtKT5yx4.css 200[39m
+[00:29:19] [32mINFO[39m: [36mGET /assets/index-brmnj7-N.js 200[39m
+[00:29:19] [32mINFO[39m: [36mGET /sw.js 200[39m
+[00:29:19] [32mINFO[39m: [36mGET / 200[39m
+[00:29:19] [32mINFO[39m: [36mGET /api/auth/get-session 200[39m
+[00:29:19] [32mINFO[39m: [36mGET / 200[39m
+[00:29:19] [32mINFO[39m: [36mGET /favicon.svg 200[39m
+[00:29:19] [32mINFO[39m: [36mGET /site.webmanifest 200[39m
+[00:29:19] [32mINFO[39m: [36mGET /favicon.svg 304[39m
+[00:29:19] [32mINFO[39m: [36mGET /android-chrome-192x192.png 200[39m
+[00:29:33] [32mINFO[39m: [36mPOST / 201[39m
+[00:29:33] [32mINFO[39m: [36mPOST /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/agents 201[39m
+[00:29:33] [32mINFO[39m: [36mPOST /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/agents 201[39m
+[00:29:33] [32mINFO[39m: [36mPOST /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/agents 201[39m
+[00:29:33] [32mINFO[39m: [36mPOST /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/agents 201[39m
+[00:29:33] [32mINFO[39m: [36mPOST /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/agents 201[39m
+[00:29:33] [32mINFO[39m: [36mPOST /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/agents 201[39m
+[00:29:33] [32mINFO[39m: [36mPOST /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/agents 201[39m
+[00:29:33] [32mINFO[39m: [36mPOST /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/agents 201[39m
+[00:29:33] [32mINFO[39m: [36mPOST /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/agents 201[39m
+[00:29:33] [32mINFO[39m: [36mPOST /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/agents 201[39m
+[00:29:33] [32mINFO[39m: [36mPOST /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/agents 201[39m
+[00:29:33] [32mINFO[39m: [36mPOST /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/agents 201[39m
+[00:30:41] [32mINFO[39m: [36mPOST /agents/a68ef205-85f9-4c20-9d47-4ab76c864a47/heartbeat/invoke 202[39m
+[00:30:41] [32mINFO[39m: [36mPOST /agents/a68ef205-85f9-4c20-9d47-4ab76c864a47/heartbeat/invoke 202[39m
+[00:30:41] [32mINFO[39m: [36mPOST /agents/e28bc80f-222f-44b3-bc91-a0c61dd269b1/heartbeat/invoke 202[39m
+[00:30:41] [32mINFO[39m: [36mPOST /agents/3467352e-e643-4285-a3ce-c04b105df898/heartbeat/invoke 202[39m
+[00:30:41] [32mINFO[39m: [36mPOST /agents/06ba3cba-5814-4cb5-adfe-d7a63606c0c2/heartbeat/invoke 202[39m
+[00:30:41] [32mINFO[39m: [36mPOST /agents/88622de5-1b07-4670-9417-363d5217b7e2/heartbeat/invoke 202[39m
+[00:30:41] [32mINFO[39m: [36mPOST /agents/5c78fc6e-77d9-4310-85e4-3b923422e5df/heartbeat/invoke 202[39m
+[00:30:41] [32mINFO[39m: [36mPOST /agents/8b85ccad-060e-4dd8-b007-4eced8098223/heartbeat/invoke 202[39m
+[00:30:41] [32mINFO[39m: [36mPOST /agents/3548ca9b-b975-40db-a55d-dec060ce79ee/heartbeat/invoke 202[39m
+[00:30:41] [32mINFO[39m: [36mPOST /agents/2d9df290-a460-43f4-ac0c-233f61f65ec9/heartbeat/invoke 202[39m
+[00:30:41] [32mINFO[39m: [36mPOST /agents/82c0b931-ac82-42fc-a64c-9b0e46af6770/heartbeat/invoke 202[39m
+[00:30:41] [32mINFO[39m: [36mPOST /agents/2a732301-8c96-48da-8ae6-c9ef9a4fa517/heartbeat/invoke 202[39m
+[00:30:41] [32mINFO[39m: [36mPOST /agents/82221f8d-03de-425b-8862-6b21bf2fbf0c/heartbeat/invoke 202[39m
+[00:30:42] [32mINFO[39m: [36mGET /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/issues?assigneeAgentId=5c78fc6e-77d9-4310-85e4-3b923422e5df&status=todo 200[39m
+[00:30:42] [32mINFO[39m: [36mGET /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/issues?assigneeAgentId=e28bc80f-222f-44b3-bc91-a0c61dd269b1&status=todo 200[39m
+[00:30:42] [32mINFO[39m: [36mGET /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/issues?assigneeAgentId=8b85ccad-060e-4dd8-b007-4eced8098223&status=todo 200[39m
+[00:30:59] [33mWARN[39m: [36mPOST /api/companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/issues 404[39m [90m{"reqBody":{"title":"[SKILL] Update strategy_viability_prescreening for quant_researcher","description":"**Recommendation:** Implement a pre-backtesting filter that screens strategy classes against current market regime before running full backtests. Specifically, require mean reversion strategies to pass a volatility regime check (e.g., ATR percentile < 70th) and momentum/breakout strategies to confirm trend strength (ADX > 25) before allocating compute to full parameter optimization. This prevents wasting backtesting cycles on structurally misaligned strategies.\n\n**Evidence:** All 13 decisions are pending with 0% pass rate across every strategy class tested. Mean reversion averaged a Sharpe of -1.50 across 7 attempts, while momentum and breakout produced Sharpes of -6.29 and -5.03 respectively — indicating the researcher is repeatedly testing strategies without first validating regime alignment. The pattern of uniform failure across diverse strategy classes strongly suggests a missing upstream filter rather than parameter-level issues.\n\n**Priority:** high\n\nReview this recommendation and update the relevant skill or agent instructions.","status":"backlog","priority":"high","assigneeAgentId":"37bbe408-e573-4598-a374-cc369bad0258","requestDepth":0},"routePath":"/companies/:companyId/issues"}[39m
+[00:30:59] [33mWARN[39m: [36mPOST /api/companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/issues 404[39m [90m{"reqBody":{"title":"[SKILL] Update sharpe_ratio_threshold_calibration for quant_researcher","description":"**Recommendation:** Introduce a hard early-exit rule during walk-forward optimization: if in-sample Sharpe drops below -1.0 within the first 30% of parameter search iterations, abort and log the strategy class as regime-incompatible for the current week. This prevents the researcher from fully evaluating strategies like momentum (Sharpe -6.29) and breakout (Sharpe -5.03) that are clearly non-viable, freeing cycles for more promising approaches such as session_open_breakout which showed the only positive Sharpe at 1.019.\n\n**Evidence:** Session_open_breakout achieved a Sharpe of 1.019 and win rate of 64% yet still failed — suggesting its failure threshold criteria may be miscalibrated or overly strict compared to strategies with deeply negative Sharpes that were run to completion. The contrast between session_open_breakout's metrics and the other three classes indicates the evaluation pipeline is not prioritizing or fast-failing appropriately.\n\n**Priority:** high\n\nReview this recommendation and update the relevant skill or agent instructions.","status":"backlog","priority":"high","assigneeAgentId":"37bbe408-e573-4598-a374-cc369bad0258","requestDepth":0},"routePath":"/companies/:companyId/issues"}[39m
+[00:30:59] [33mWARN[39m: [36mPOST /api/companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/issues 404[39m [90m{"reqBody":{"title":"[SKILL] Update session_open_breakout_parameter_refinement for quant_researcher","description":"**Recommendation:** Prioritize deeper parameter exploration for the session_open_breakout strategy class. With a Sharpe of 1.019 and a 64% win rate, it is the only strategy near viability. The researcher should expand the breakout window range, test tighter entry timing around London and NY open sessions specifically for gold, and apply asymmetric stop/target ratios (e.g., 1:1.5 to 1:2.5 R:R) to push Sharpe above the passing threshold rather than continuing to test fundamentally broken strategy classes.\n\n**Evidence:** Session_open_breakout is the sole strategy with a positive Sharpe (1.019) and the highest win rate (64.04%) across all 10 total attempts, yet it failed with only 1 attempt — meaning it received the least testing of all classes despite being the strongest candidate. All other classes show structurally negative Sharpes suggesting they are regime-mismatched, making session_open_breakout the rational focus for compute reallocation.\n\n**Priority:** medium\n\nReview this recommendation and update the relevant skill or agent instructions.","status":"backlog","priority":"medium","assigneeAgentId":"37bbe408-e573-4598-a374-cc369bad0258","requestDepth":0},"routePath":"/companies/:companyId/issues"}[39m
+[00:31:23] [32mINFO[39m: [36mGET /agents/me 200[39m
+[00:31:31] [32mINFO[39m: [36mGET /agents/me/inbox-lite 200[39m
+[00:31:40] [32mINFO[39m: [36mGET /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/dashboard 200[39m
+[00:31:45] [32mINFO[39m: [36mGET /agents/me 200[39m
+[00:31:49] [32mINFO[39m: [36mGET /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/agents 200[39m
+[00:31:49] [32mINFO[39m: [36mGET /agents/me/inbox-lite 200[39m
+[00:32:20] [32mINFO[39m: [36mGET /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/agents 200[39m
+[00:32:48] [32mINFO[39m: [36mGET / 304[39m
+[00:32:48] [32mINFO[39m: [36mGET /api/auth/get-session 304[39m
+[00:32:48] [32mINFO[39m: [36mGET / 200[39m
+[00:32:50] [32mINFO[39m: [36mGET /onboarding 200[39m
+[00:32:50] [32mINFO[39m: [36mGET /assets/index-brmnj7-N.js 304[39m
+[00:32:50] [32mINFO[39m: [36mGET /assets/index-CtKT5yx4.css 304[39m
+[00:32:50] [32mINFO[39m: [36mGET / 304[39m
+[00:32:50] [32mINFO[39m: [36mGET /api/auth/get-session 304[39m
+[00:32:50] [32mINFO[39m: [36mGET / 304[39m
+[00:32:50] [32mINFO[39m: [36mGET /favicon.svg 304[39m
+[00:32:50] [32mINFO[39m: [36mGET /site.webmanifest 304[39m
+[00:32:50] [32mINFO[39m: [36mGET /android-chrome-192x192.png 304[39m
+[00:32:52] [32mINFO[39m: [36mGET /sw.js 304[39m
+[00:33:23] [32mINFO[39m: [36mPOST / 201[39m
+[00:33:23] [32mINFO[39m: [36mGET / 200[39m
+[00:33:23] [32mINFO[39m: [36mPOST /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/goals 201[39m
+[00:33:23] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/adapters/claude_local/models 200[39m
+[00:33:38] [32mINFO[39m: [36mPOST /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/adapters/claude_local/test-environment 200[39m
+[00:33:38] [32mINFO[39m: [36mPOST /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/agents 201[39m
+[00:33:38] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/adapters/claude_local/models 304[39m
+[00:33:45] [32mINFO[39m: [36mPOST /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/projects 201[39m
+[00:33:45] [32mINFO[39m: [36mPOST /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/issues 201[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/live-runs 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/live-runs 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /plugins/ui-contributions 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/approvals 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/agents 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/join-requests?status=pending_approval 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /api/auth/get-session 304[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/projects 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/heartbeat-runs 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/issues?status=backlog%2Ctodo%2Cin_progress%2Cin_review%2Cblocked%2Cdone&touchedByUserId=me 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/dashboard 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/sidebar-badges 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/GOL-1/comments 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/sidebar-badges 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/GOL-1/activity 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/GOL-1/runs 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/GOL-1 200[39m
+[00:33:45] [32mINFO[39m: [36mGET / 304[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/GOL-1/live-runs 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/agents 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/issues 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/GOL-1/approvals 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/GOL-1/attachments 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/GOL-1/active-run 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/dashboard 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /instance/settings/general 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/8a6422d0-ec5d-42f8-b3d4-2226b8aef76c/documents 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /instance/settings/experimental 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/labels 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/execution-workspaces?projectId=92e62560-79e0-458f-aef9-25579d7f118a&reuseEligible=true 200[39m
+[00:33:45] [32mINFO[39m: [36mPOST /issues/8a6422d0-ec5d-42f8-b3d4-2226b8aef76c/read 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /heartbeat-runs/be1e428e-56a8-46a0-9d2d-c5a78188e3dc/log?offset=0&limitBytes=256000 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/labels 304[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/issues 304[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/8a6422d0-ec5d-42f8-b3d4-2226b8aef76c/documents 304[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/issues?status=backlog%2Ctodo%2Cin_progress%2Cin_review%2Cblocked%2Cdone&touchedByUserId=me 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/dashboard 304[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/GOL-1/activity 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/GOL-1/comments 304[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/GOL-1/runs 304[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/sidebar-badges 304[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/GOL-1 304[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/GOL-1/attachments 304[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/GOL-1/live-runs 304[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/GOL-1/approvals 304[39m
+[00:33:45] [32mINFO[39m: [36mGET /issues/GOL-1/active-run 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/issues?status=backlog%2Ctodo%2Cin_progress%2Cin_review%2Cblocked%2Cdone&touchedByUserId=me 304[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/sidebar-badges 304[39m
+[00:33:45] [32mINFO[39m: [36mGET /heartbeat-runs/be1e428e-56a8-46a0-9d2d-c5a78188e3dc/log?offset=195&limitBytes=256000 200[39m
+[00:33:45] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/issues?status=backlog%2Ctodo%2Cin_progress%2Cin_review%2Cblocked%2Cdone&touchedByUserId=me 304[39m
+[00:33:47] [32mINFO[39m: [36mGET /heartbeat-runs/be1e428e-56a8-46a0-9d2d-c5a78188e3dc/log?offset=195&limitBytes=256000 200[39m
+[00:33:48] [32mINFO[39m: [36mGET /issues/GOL-1/live-runs 304[39m
+[00:33:48] [32mINFO[39m: [36mGET /issues/GOL-1/active-run 304[39m
+[00:33:49] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/org 200[39m
+[00:33:53] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/activity 200[39m
+[00:33:53] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/live-runs?minCount=4 200[39m
+[00:33:53] [32mINFO[39m: [36mGET /heartbeat-runs/be1e428e-56a8-46a0-9d2d-c5a78188e3dc/log?offset=0&limitBytes=256000 200[39m
+[00:33:55] [32mINFO[39m: [36mGET /heartbeat-runs/be1e428e-56a8-46a0-9d2d-c5a78188e3dc/log?offset=4782&limitBytes=256000 200[39m
+[00:33:55] [32mINFO[39m: [36mGET /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/live-runs 304[39m
+[00:33:55] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/live-runs 304[39m
+[00:33:57] [32mINFO[39m: [36mGET /heartbeat-runs/be1e428e-56a8-46a0-9d2d-c5a78188e3dc/log?offset=22579&limitBytes=256000 200[39m
+[00:33:59] [32mINFO[39m: [36mGET /heartbeat-runs/be1e428e-56a8-46a0-9d2d-c5a78188e3dc/log?offset=22579&limitBytes=256000 304[39m
+[00:34:00] [32mINFO[39m: [36mGET /companies/ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf/sidebar-badges 304[39m
+[00:34:00] [32mINFO[39m: [36mGET /companies/a54fca97-1be1-47be-a7ae-c5f6977ae9d8/sidebar-badges 304[39m
+[00:34:01] [32mINFO[39m: [36mGET /heartbeat-runs/be1e428e-56a8-46a0-9d2d-c5a78188e3dc/log?offset=22579&limitBytes=256000 304[39m
