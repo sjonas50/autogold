@@ -19,8 +19,6 @@ from loguru import logger
 
 from gold_trading.backtest.engine import (
     StrategySignals,
-    generate_breakout_signals,
-    generate_mean_reversion_signals,
     run_backtest,
 )
 from gold_trading.backtest.montecarlo import run_monte_carlo
@@ -31,7 +29,6 @@ from gold_trading.db.queries.macro import get_latest_macro
 from gold_trading.db.queries.regime import get_latest_regime
 from gold_trading.db.queries.strategies import get_strategies_by_status, upsert_strategy
 from gold_trading.embeddings.client import embed_text
-from gold_trading.embeddings.corpus import search_corpus
 from gold_trading.models.lesson import DecisionLogEntry
 from gold_trading.models.strategy import Strategy
 
@@ -370,81 +367,94 @@ async def main() -> None:
         context["cio_directive"] = cio_directive
         logger.info(f"Context: regime={context['regime']}, macro={context['macro_regime']}")
 
-        # Search Pine Script corpus for relevant code
-        try:
-            regime = context.get("regime", "breakout")
-            query_text = f"Pine Script strategy for gold {regime} {context.get('macro_regime', '')}"
-            query_embedding = await embed_text(query_text)
-            corpus_chunks = await search_corpus(query_embedding, limit=8)
-        except Exception as e:
-            logger.warning(f"Corpus search failed: {e}. Proceeding without RAG context.")
-            corpus_chunks = []
+        # Get Strategy Analyst guidance
+        analyst_guidance = ""
+        analyst_row = await conn.fetchrow(
+            "SELECT decision, reasoning FROM decision_log "
+            "WHERE agent_name = 'strategy_analyst' ORDER BY created_at DESC LIMIT 1"
+        )
+        if analyst_row:
+            analyst_guidance = f"{analyst_row['decision']}\n{analyst_row['reasoning']}"
+            logger.info(f"Strategy Analyst guidance: {analyst_row['decision'][:80]}")
 
-        # Generate Pine Script
-        generated = await generate_pine_script(context, corpus_chunks)
-        if not generated:
-            logger.error("Pine Script generation failed")
+        # Build past results summary for Claude
+        past_results = "\n".join(context.get("past_results", [])[:10])
+
+        # Count existing strategies for unique ID
+        existing_count = await conn.fetchrow("SELECT COUNT(*) as cnt FROM strategies")
+        strategy_num = (existing_count["cnt"] or 0) + 1
+        strategy_id = f"gs_v{strategy_num}_auto"
+
+        # === DYNAMIC STRATEGY GENERATION ===
+        # Claude writes the actual Python signal logic — no hardcoded strategies
+        from gold_trading.backtest.dynamic_strategy import (
+            STRATEGY_CODE_PROMPT,
+            execute_generated_strategy,
+        )
+
+        context_str = (
+            f"Regime: {context['regime']} (confidence: {context.get('regime_confidence', 0.5):.0%})\n"
+            f"ADX: {context.get('adx_14', 'N/A')} | ATR: {context.get('atr_14', 'N/A')}\n"
+            f"Macro: {context['macro_regime']}\n"
+            f"CIO directive: {cio_directive or 'None'}"
+        )
+
+        task_str = (
+            f"Generate a trading strategy for GC gold futures on 5-minute bars.\n"
+            f"The market is currently {context['regime']} with ADX={context.get('adx_14', '?')}.\n"
+            f"Macro regime is {context['macro_regime']}.\n"
+            f"Write a strategy that is APPROPRIATE for these conditions.\n"
+            f"Do NOT use mean-reversion in a trending market. Do NOT use breakout in a ranging market.\n"
+            f"Be creative — try different indicators, patterns, and approaches."
+        )
+
+        prompt = STRATEGY_CODE_PROMPT.format(
+            context=context_str,
+            guidance=analyst_guidance or "No specific guidance. Match strategy to current regime.",
+            past_results=past_results or "No past strategies yet.",
+            task=task_str,
+        )
+
+        # Call Claude to generate the strategy code
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        client = anthropic.AsyncAnthropic(api_key=api_key)
+
+        response = await client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=3000,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        strategy_code = response.content[0].text.strip()
+        # Clean up code fences if present
+        if strategy_code.startswith("```"):
+            lines = strategy_code.split("\n")
+            strategy_code = "\n".join(line for line in lines if not line.strip().startswith("```"))
+
+        logger.info(f"Claude generated strategy code ({len(strategy_code)} chars)")
+
+        # Execute the generated strategy against historical data
+        signals = execute_generated_strategy(strategy_code, ohlcv)
+
+        if signals is None:
+            logger.error("Generated strategy failed to execute — retrying next heartbeat")
+            await insert_decision(
+                conn,
+                DecisionLogEntry(
+                    agent_name="quant_researcher",
+                    decision_type="strategy_development",
+                    inputs_summary={"regime": context["regime"], "code_length": len(strategy_code)},
+                    decision=f"FAIL: {strategy_id} — execution error",
+                    reasoning="Claude-generated strategy code failed to execute. Will retry.",
+                    confidence=0.1,
+                ),
+            )
             return
 
-        # Generate unique strategy ID (append attempt number)
-        base_id = generated.get("id", f"gs_auto_{context['regime']}")
-        existing_ids = context.get("existing_strategies", [])
-        attempt = sum(1 for eid in existing_ids if eid.startswith(base_id.rsplit("_a", 1)[0])) + 1
-        strategy_id = f"{base_id}_a{attempt}" if attempt > 1 else base_id
-        pine_script = generated.get("pine_script", "")
-        strategy_class = generated.get("strategy_class", "breakout")
-
-        logger.info(f"Generated strategy: {strategy_id} ({strategy_class}), attempt #{attempt}")
-
-        # Strategy mutation: if a good base exists, mutate its params instead of random
-        import random
-
-        mutation_base = await find_best_strategy_to_mutate(conn)
-        rng = random.Random(attempt + hash(strategy_id))
-
-        if mutation_base and mutation_base["sharpe"] > -2.0:
-            # MUTATE: vary the best strategy's params by ±20-40%
-            base_params = mutation_base["params"]
-            logger.info(
-                f"Mutating from {mutation_base['id']} (Sharpe={mutation_base['sharpe']:.2f}): {base_params}"
-            )
-
-            if base_params.get("type") == "breakout":
-                strategy_class = "breakout"
-                lookback = max(3, int(base_params.get("lookback", 12) * rng.uniform(0.6, 1.4)))
-                atr_mult = max(0.5, base_params.get("atr_multiplier", 1.5) * rng.uniform(0.7, 1.3))
-                signals = generate_breakout_signals(
-                    ohlcv, lookback=lookback, atr_multiplier=atr_mult
-                )
-                logger.info(
-                    f"Mutated breakout params: lookback={lookback}, atr_mult={atr_mult:.2f}"
-                )
-            else:
-                strategy_class = "mean_reversion"
-                vwap_period = max(
-                    12, int(base_params.get("vwap_period", 48) * rng.uniform(0.7, 1.3))
-                )
-                entry_thresh = max(
-                    0.5, base_params.get("entry_threshold", 2.0) * rng.uniform(0.7, 1.3)
-                )
-                signals = generate_mean_reversion_signals(
-                    ohlcv, vwap_period=vwap_period, entry_threshold=entry_thresh
-                )
-                logger.info(
-                    f"Mutated mean-rev params: vwap={vwap_period}, entry={entry_thresh:.2f}"
-                )
-        elif strategy_class in ("breakout", "momentum"):
-            lookback = rng.choice([6, 9, 12, 18, 24])
-            atr_mult = rng.choice([1.0, 1.5, 2.0, 2.5, 3.0])
-            signals = generate_breakout_signals(ohlcv, lookback=lookback, atr_multiplier=atr_mult)
-            logger.info(f"Breakout params: lookback={lookback}, atr_mult={atr_mult}")
-        else:
-            vwap_period = rng.choice([24, 36, 48, 72, 96])
-            entry_thresh = rng.choice([1.0, 1.5, 2.0, 2.5, 3.0])
-            signals = generate_mean_reversion_signals(
-                ohlcv, vwap_period=vwap_period, entry_threshold=entry_thresh
-            )
-            logger.info(f"MeanRev params: vwap_period={vwap_period}, entry_thresh={entry_thresh}")
+        strategy_class = signals.direction + "_dynamic"
+        logger.info(
+            f"Strategy {strategy_id}: {signals.entries.sum()} entries, direction={signals.direction}"
+        )
 
         bt_result = run_backtest(ohlcv, signals, instrument="GC")
         bt_result.strategy_id = strategy_id
@@ -462,21 +472,16 @@ async def main() -> None:
                     n_iterations=1000,
                 )
 
-        # Build params dict for traceability
-        if strategy_class in ("breakout", "momentum"):
-            bt_params = {"lookback": lookback, "atr_multiplier": atr_mult, "type": "breakout"}
-        else:
-            bt_params = {
-                "vwap_period": vwap_period,
-                "entry_threshold": entry_thresh,
-                "type": "mean_reversion",
-            }
-
         # Save strategy with full metrics
+        bt_params = {
+            "type": "dynamic",
+            "direction": signals.direction,
+            "code_length": len(strategy_code),
+        }
         strategy = Strategy(
             id=strategy_id,
-            name=generated.get("name", strategy_id),
-            pine_script=pine_script,
+            name=f"Auto {context['regime']} #{strategy_num}",
+            pine_script=strategy_code,  # Store the Python code (Pine Script generated later if it passes)
             instrument="GC",
             strategy_class=strategy_class,
             vbt_sharpe=bt_result.sharpe_ratio,
@@ -505,7 +510,7 @@ async def main() -> None:
                     "regime": context["regime"],
                     "macro": context["macro_regime"],
                     "strategy_class": strategy_class,
-                    "corpus_chunks_used": len(corpus_chunks),
+                    "code_length": len(strategy_code),
                     "lessons_used": len(context.get("lessons", [])),
                 },
                 decision=f"{'PASS' if bt_result.passed_gate else 'FAIL'}: {strategy_id}",
@@ -518,14 +523,17 @@ async def main() -> None:
             ),
         )
 
-        # Write Pine Script to file for human deployment
-        if bt_result.passed_gate and pine_script:
-            pine_dir = os.path.join(os.path.dirname(__file__), "..", "pine", "generated")
-            os.makedirs(pine_dir, exist_ok=True)
-            pine_path = os.path.join(pine_dir, f"{strategy_id}.pine")
-            with open(pine_path, "w") as f:
-                f.write(pine_script)
-            logger.info(f"Pine Script written to {pine_path}")
+        # Save strategy code to file for review
+        if bt_result.passed_gate:
+            code_dir = os.path.join(os.path.dirname(__file__), "..", "pine", "generated")
+            os.makedirs(code_dir, exist_ok=True)
+            code_path = os.path.join(code_dir, f"{strategy_id}.py")
+            with open(code_path, "w") as f:
+                f.write(f"# Strategy: {strategy_id}\n")
+                f.write(f"# Sharpe: {bt_result.sharpe_ratio}, WR: {bt_result.win_rate}\n")
+                f.write(f"# Regime: {context['regime']}, Macro: {context['macro_regime']}\n\n")
+                f.write(strategy_code)
+            logger.info(f"Strategy code saved to {code_path}")
 
         logger.info(
             f"Quant Researcher heartbeat complete. "

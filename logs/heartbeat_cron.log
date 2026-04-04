@@ -1,3 +1,10 @@
 /Users/sjonas/tradingview/scripts/heartbeat_cron.sh: line 9: logs/heartbeat_cron.pid: No such file or directory
 AutoGoldFutures heartbeat scheduler started (PID 86320)
 [18:30:41] Risk Manager → queued
+[18:45:41] Risk Manager → queued
+[18:45:41] Regime Analyst → queued
+[18:45:41] Sentiment Analyst → queued
+[18:45:41] Quant Researcher → queued
+[18:45:41] Walk-Forward Validator → queued
+[18:45:41] Strategy Monitor → queued
+[19:00:41] Risk Manager → queued

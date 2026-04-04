@@ -193,6 +193,77 @@ def generate_breakout_signals(
     return StrategySignals(entries=entries, exits=exits, direction="long")
 
 
+def generate_short_breakout_signals(
+    ohlcv: pd.DataFrame,
+    lookback: int = 20,
+    atr_period: int = 14,
+    atr_multiplier: float = 1.8,
+    adx_min: float = 30.0,
+    ema_period: int = 50,
+) -> StrategySignals:
+    """Generate short breakout signals for trending-down markets.
+
+    Enter short when price breaks below the low of the last N bars,
+    with ADX > threshold confirming trend strength and price below EMA.
+    Exit when price rises above entry + ATR*multiplier.
+
+    Args:
+        ohlcv: DataFrame with OHLCV columns.
+        lookback: Number of bars for the range low calculation.
+        atr_period: ATR period.
+        atr_multiplier: ATR multiple for stop distance.
+        adx_min: Minimum ADX to confirm trend (filter out ranging).
+        ema_period: EMA period for trend direction filter.
+    """
+    high = ohlcv["high"].astype(float)
+    low = ohlcv["low"].astype(float)
+    close = ohlcv["close"].astype(float)
+
+    # Range low
+    range_low = low.rolling(lookback).min().shift(1)
+
+    # ATR
+    tr = pd.concat(
+        [high - low, (high - close.shift(1)).abs(), (low - close.shift(1)).abs()],
+        axis=1,
+    ).max(axis=1)
+    atr = tr.rolling(atr_period).mean()
+
+    # EMA trend filter — only short when price is below EMA
+    ema = close.ewm(span=ema_period, adjust=False).mean()
+
+    # ADX filter — only trade when trend is strong
+    up_move = high - high.shift(1)
+    down_move = low.shift(1) - low
+    plus_dm = pd.Series(
+        np.where((up_move > down_move) & (up_move > 0), up_move, 0), index=ohlcv.index
+    )
+    minus_dm = pd.Series(
+        np.where((down_move > up_move) & (down_move > 0), down_move, 0), index=ohlcv.index
+    )
+    atr_smooth = tr.rolling(atr_period).mean()
+    plus_di = 100 * (plus_dm.rolling(atr_period).mean() / atr_smooth)
+    minus_di = 100 * (minus_dm.rolling(atr_period).mean() / atr_smooth)
+    dx = 100 * ((plus_di - minus_di).abs() / (plus_di + minus_di))
+    adx = dx.rolling(atr_period).mean()
+
+    # Entry: price breaks below range low + trend confirmation
+    entries = (
+        (close < range_low)
+        & (close < ema)  # Below EMA = downtrend
+        & (adx > adx_min)  # Strong trend
+        & (atr > atr.rolling(50).mean() * 0.5)  # Minimum volatility
+    )
+
+    # Exit: price rises above entry level + ATR * multiplier (stop hit)
+    exits = close > (range_low + atr * atr_multiplier)
+
+    entries = entries.fillna(False)
+    exits = exits.fillna(False)
+
+    return StrategySignals(entries=entries, exits=exits, direction="short")
+
+
 def generate_mean_reversion_signals(
     ohlcv: pd.DataFrame,
     vwap_period: int = 48,
