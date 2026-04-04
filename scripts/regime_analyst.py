@@ -166,6 +166,33 @@ def classify_regime_hmm(
     return state, confidence
 
 
+async def handle_team_lead_duties(conn):
+    """Check for CIO tasks and delegate to Macro/Sentiment if needed."""
+    from gold_trading.paperclip import create_task, get_my_tasks
+
+    tasks = await get_my_tasks("regime_analyst")
+    for task in tasks:
+        title = task.get("title", "").lower()
+        desc = task.get("description", "")
+
+        if any(kw in title for kw in ["macro", "fred", "yield", "dxy", "cpi"]):
+            await create_task(
+                title=f"[From Intelligence Lead] {task.get('title', '')}",
+                description=desc,
+                assignee="macro_analyst",
+                parent_id=task.get("id"),
+            )
+        elif any(kw in title for kw in ["sentiment", "news", "headline", "fomc"]):
+            await create_task(
+                title=f"[From Intelligence Lead] {task.get('title', '')}",
+                description=desc,
+                assignee="sentiment_analyst",
+                parent_id=task.get("id"),
+            )
+        else:
+            logger.info(f"Regime Analyst handling task directly: {task.get('title', '')}")
+
+
 async def main() -> None:
     """Main heartbeat execution."""
     logger.info("Regime Analyst (Intelligence Lead) heartbeat starting")
@@ -389,32 +416,3 @@ if __name__ == "__main__":
 
     load_dotenv()
     asyncio.run(main())
-
-
-# --- Intelligence Lead delegation ---
-async def handle_team_lead_duties(conn):
-    """Check for CIO tasks and delegate to Macro/Sentiment if needed."""
-    from gold_trading.paperclip import create_task, get_my_tasks
-
-    tasks = await get_my_tasks("regime_analyst")
-    for task in tasks:
-        title = task.get("title", "").lower()
-        desc = task.get("description", "")
-
-        # Route to appropriate sub-agent
-        if any(kw in title for kw in ["macro", "fred", "yield", "dxy", "cpi"]):
-            await create_task(
-                title=f"[From Intelligence Lead] {task.get('title', '')}",
-                description=desc,
-                assignee="macro_analyst",
-                parent_id=task.get("id"),
-            )
-        elif any(kw in title for kw in ["sentiment", "news", "headline", "fomc"]):
-            await create_task(
-                title=f"[From Intelligence Lead] {task.get('title', '')}",
-                description=desc,
-                assignee="sentiment_analyst",
-                parent_id=task.get("id"),
-            )
-        else:
-            logger.info(f"Regime Analyst handling task directly: {task.get('title', '')}")

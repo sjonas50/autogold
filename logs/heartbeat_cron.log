@@ -1,3 +1,9 @@
 AutoGoldFutures heartbeat scheduler started
 Press Ctrl+C to stop
 [17:38:42] Risk Manager → queued
+[17:53:42] Risk Manager → queued
+[17:53:42] Regime Analyst → queued
+[17:53:42] Sentiment Analyst → queued
+[17:53:42] Quant Researcher → queued
+[17:53:43] Walk-Forward Validator → queued
+[17:53:43] Strategy Monitor → queued

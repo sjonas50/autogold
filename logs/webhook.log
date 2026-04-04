@@ -1,0 +1,11 @@
+INFO:     Started server process [59669]
+INFO:     Waiting for application startup.
+2026-04-03 17:54:44.406 | INFO     | gold_trading.db.client:get_pool:32 - Database connection pool created
+2026-04-03 17:54:44.415 | DEBUG    | gold_trading.db.client:run_migrations:67 - Skipping already-applied migration: 001_initial.sql
+2026-04-03 17:54:44.415 | DEBUG    | gold_trading.db.client:run_migrations:67 - Skipping already-applied migration: 002_fix_macro_precision.sql
+2026-04-03 17:54:44.415 | DEBUG    | gold_trading.db.client:run_migrations:67 - Skipping already-applied migration: 003_add_strategy_trade_count.sql
+2026-04-03 17:54:44.415 | INFO     | gold_trading.db.client:run_migrations:70 - Applying migration: 004_multi_timeframe_tables.sql
+2026-04-03 17:54:44.434 | INFO     | gold_trading.db.client:run_migrations:80 - Migration applied: 004_multi_timeframe_tables.sql
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55476 - "GET /health HTTP/1.1" 200 OK
