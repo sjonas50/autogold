@@ -20,8 +20,8 @@ from gold_trading.db.queries.strategies import get_active_strategies, get_strate
 from gold_trading.models.lesson import DecisionLogEntry
 
 PAPERCLIP_URL = os.environ.get("PAPERCLIP_URL", "http://localhost:3100")
-COMPANY_ID = os.environ.get("PAPERCLIP_COMPANY_ID", "3422f81a-8ca2-4ce1-aae5-5cf8ce34fa0e")
-CIO_AGENT_ID = "37bbe408-e573-4598-a374-cc369bad0258"
+COMPANY_ID = os.environ.get("PAPERCLIP_COMPANY_ID", "ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf")
+CIO_AGENT_ID = "2a732301-8c96-48da-8ae6-c9ef9a4fa517"
 
 # Degradation thresholds
 MIN_TRADES_FOR_EVALUATION = 10

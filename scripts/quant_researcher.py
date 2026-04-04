@@ -277,9 +277,9 @@ async def check_manager_tasks(conn: asyncpg.Connection) -> str | None:
 
 async def _legacy_check_cio_tasks(conn: asyncpg.Connection) -> str | None:
     """Legacy: direct CIO task check (kept as fallback)."""
-    quant_id = "881e708a-b4c2-472d-9c74-af7b515cac23"
+    quant_id = "8b85ccad-060e-4dd8-b007-4eced8098223"
     paperclip_url = os.environ.get("PAPERCLIP_URL", "http://localhost:3100")
-    company_id = os.environ.get("PAPERCLIP_COMPANY_ID", "3422f81a-8ca2-4ce1-aae5-5cf8ce34fa0e")
+    company_id = os.environ.get("PAPERCLIP_COMPANY_ID", "ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf")
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:

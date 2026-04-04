@@ -31,10 +31,10 @@ TRAIN_RATIO = 0.7  # 70% train, 30% test
 OOS_DEGRADATION_THRESHOLD = 0.50  # Reject if OOS Sharpe < 50% of IS Sharpe
 
 PAPERCLIP_URL = os.environ.get("PAPERCLIP_URL", "http://localhost:3100")
-COMPANY_ID = os.environ.get("PAPERCLIP_COMPANY_ID", "3422f81a-8ca2-4ce1-aae5-5cf8ce34fa0e")
+COMPANY_ID = os.environ.get("PAPERCLIP_COMPANY_ID", "ea9cb59f-a7c4-4c1b-856f-173ea1d5bddf")
 # Reports to Technical Analyst (Strategy Team Lead), escalates to CIO
-STRATEGY_LEAD_ID = "e475c802-6bde-4d8e-bb43-602842ae5e7f"
-CIO_AGENT_ID = "37bbe408-e573-4598-a374-cc369bad0258"
+STRATEGY_LEAD_ID = "82c0b931-ac82-42fc-a64c-9b0e46af6770"
+CIO_AGENT_ID = "2a732301-8c96-48da-8ae6-c9ef9a4fa517"
 
 
 async def load_ohlcv(conn: asyncpg.Connection) -> pd.DataFrame | None:
