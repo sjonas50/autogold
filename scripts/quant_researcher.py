@@ -367,6 +367,21 @@ async def main() -> None:
         context["cio_directive"] = cio_directive
         logger.info(f"Context: regime={context['regime']}, macro={context['macro_regime']}")
 
+        # === TOURNAMENT-BASED STRATEGY DEVELOPMENT ===
+        from gold_trading.backtest.dynamic_strategy import (
+            STRATEGY_CODE_PROMPT,
+            execute_generated_strategy,
+        )
+        from gold_trading.backtest.tournament import (
+            format_leaderboard_for_prompt,
+            get_leaderboard,
+            should_explore,
+        )
+
+        # Get leaderboard and decide: explore (new) or exploit (refine)?
+        leaderboard = await get_leaderboard(conn, limit=10)
+        explore = should_explore(leaderboard)
+
         # Get Strategy Analyst guidance
         analyst_guidance = ""
         analyst_row = await conn.fetchrow(
@@ -375,22 +390,10 @@ async def main() -> None:
         )
         if analyst_row:
             analyst_guidance = f"{analyst_row['decision']}\n{analyst_row['reasoning']}"
-            logger.info(f"Strategy Analyst guidance: {analyst_row['decision'][:80]}")
 
-        # Build past results summary for Claude
-        past_results = "\n".join(context.get("past_results", [])[:10])
-
-        # Count existing strategies for unique ID
+        # Strategy ID
         existing_count = await conn.fetchrow("SELECT COUNT(*) as cnt FROM strategies")
         strategy_num = (existing_count["cnt"] or 0) + 1
-        strategy_id = f"gs_v{strategy_num}_auto"
-
-        # === DYNAMIC STRATEGY GENERATION ===
-        # Claude writes the actual Python signal logic — no hardcoded strategies
-        from gold_trading.backtest.dynamic_strategy import (
-            STRATEGY_CODE_PROMPT,
-            execute_generated_strategy,
-        )
 
         context_str = (
             f"Regime: {context['regime']} (confidence: {context.get('regime_confidence', 0.5):.0%})\n"
@@ -399,23 +402,52 @@ async def main() -> None:
             f"CIO directive: {cio_directive or 'None'}"
         )
 
-        task_str = (
-            f"Generate a trading strategy for GC gold futures on 5-minute bars.\n"
-            f"The market is currently {context['regime']} with ADX={context.get('adx_14', '?')}.\n"
-            f"Macro regime is {context['macro_regime']}.\n"
-            f"Write a strategy that is APPROPRIATE for these conditions.\n"
-            f"Do NOT use mean-reversion in a trending market. Do NOT use breakout in a ranging market.\n"
-            f"Be creative — try different indicators, patterns, and approaches."
-        )
+        leaderboard_str = format_leaderboard_for_prompt(leaderboard)
+
+        if explore or not leaderboard:
+            # === EXPLORE: generate a completely new strategy ===
+            strategy_id = f"gs_v{strategy_num}_new"
+            logger.info(f"MODE: EXPLORE — generating new strategy {strategy_id}")
+
+            task_str = (
+                f"Generate a NEW trading strategy for GC gold futures on 5-minute bars.\n"
+                f"Market: {context['regime']}, ADX={context.get('adx_14', '?')}, macro={context['macro_regime']}.\n"
+                f"Match the strategy to current conditions. Be creative — try different indicators.\n"
+                f"Do NOT copy any existing strategy. Try a completely different approach."
+            )
+        else:
+            # === EXPLOIT: refine the best existing strategy ===
+            best = leaderboard[0]
+            strategy_id = f"gs_v{strategy_num}_ref"
+            logger.info(
+                f"MODE: EXPLOIT — refining {best['id']} (fitness={best['fitness']:.3f}, "
+                f"Sharpe={best['sharpe']:.2f}, WR={best['win_rate']:.0%})"
+            )
+
+            task_str = (
+                f"REFINE this existing strategy that has fitness={best['fitness']:.3f}:\n"
+                f"- Sharpe: {best['sharpe']:.2f} (target: >= 1.5)\n"
+                f"- Win Rate: {best['win_rate']:.0%} (target: >= 50%)\n"
+                f"- Profit Factor: {best.get('profit_factor', 0):.2f} (target: >= 1.3)\n"
+                f"- Max Drawdown: {best.get('max_drawdown', 0):.2%} (target: < 5%)\n"
+                f"- Trades: {best.get('trades', 0)}\n\n"
+                f"Here is the current code:\n```python\n{best.get('code', '# No code')}\n```\n\n"
+                f"Make SPECIFIC improvements:\n"
+                f"- If win rate is low: tighten entry conditions, add confirmation filters\n"
+                f"- If Sharpe is negative: adjust stop/target ratio, add trend filter\n"
+                f"- If drawdown is high: reduce position frequency, add regime filter\n"
+                f"- If profit factor < 1: improve R:R ratio, widen targets or tighten stops\n\n"
+                f"Keep what works. Change what doesn't. Small improvements compound."
+            )
 
         prompt = STRATEGY_CODE_PROMPT.format(
             context=context_str,
-            guidance=analyst_guidance or "No specific guidance. Match strategy to current regime.",
-            past_results=past_results or "No past strategies yet.",
+            guidance=analyst_guidance or "No specific guidance.",
+            past_results=leaderboard_str,
             task=task_str,
         )
 
-        # Call Claude to generate the strategy code
+        # Call Claude
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         client = anthropic.AsyncAnthropic(api_key=api_key)
 
@@ -426,12 +458,12 @@ async def main() -> None:
         )
 
         strategy_code = response.content[0].text.strip()
-        # Clean up code fences if present
         if strategy_code.startswith("```"):
             lines = strategy_code.split("\n")
             strategy_code = "\n".join(line for line in lines if not line.strip().startswith("```"))
 
-        logger.info(f"Claude generated strategy code ({len(strategy_code)} chars)")
+        mode = "EXPLORE" if explore or not leaderboard else "EXPLOIT"
+        logger.info(f"[{mode}] Claude generated strategy code ({len(strategy_code)} chars)")
 
         # Execute the generated strategy against historical data
         signals = execute_generated_strategy(strategy_code, ohlcv)
@@ -472,15 +504,30 @@ async def main() -> None:
                     n_iterations=1000,
                 )
 
+        # Calculate fitness for tournament ranking
+        from gold_trading.backtest.tournament import calculate_fitness
+
+        fitness = calculate_fitness(
+            bt_result.sharpe_ratio,
+            bt_result.win_rate,
+            bt_result.profit_factor,
+            bt_result.max_drawdown,
+            bt_result.total_trades,
+        )
+        logger.info(f"[{mode}] Fitness: {fitness:+.3f}")
+
         # Save strategy with full metrics
         bt_params = {
             "type": "dynamic",
+            "mode": mode.lower(),
             "direction": signals.direction,
             "code_length": len(strategy_code),
+            "fitness": fitness,
+            "refined_from": leaderboard[0]["id"] if mode == "EXPLOIT" and leaderboard else None,
         }
         strategy = Strategy(
             id=strategy_id,
-            name=f"Auto {context['regime']} #{strategy_num}",
+            name=f"{mode} {context['regime']} #{strategy_num}",
             pine_script=strategy_code,  # Store the Python code (Pine Script generated later if it passes)
             instrument="GC",
             strategy_class=strategy_class,

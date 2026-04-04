@@ -79,7 +79,9 @@ def execute_generated_strategy(
         result = func(df)
 
         if not isinstance(result, tuple) or len(result) != 3:
-            logger.error(f"generate_signals must return (entries, exits, direction), got {type(result)}")
+            logger.error(
+                f"generate_signals must return (entries, exits, direction), got {type(result)}"
+            )
             return None
 
         entries, exits, direction = result
@@ -99,7 +101,9 @@ def execute_generated_strategy(
 
         entry_count = entries.sum()
         exit_count = exits.sum()
-        logger.info(f"Strategy generated {entry_count} entries, {exit_count} exits, direction={direction}")
+        logger.info(
+            f"Strategy generated {entry_count} entries, {exit_count} exits, direction={direction}"
+        )
 
         if entry_count == 0:
             logger.warning("Strategy produced zero entries")
